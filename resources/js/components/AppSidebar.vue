@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { LayoutGrid, Package, Users, Warehouse } from '@lucide/vue';
+import { FileText, LayoutGrid, Users } from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -16,7 +16,6 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
-// Главно
 const mainNavItems: NavItem[] = [
     {
         title: 'Контролна табла',
@@ -25,22 +24,16 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-// Материјално сметководство (placeholder - Фаза 1)
-const materialNavItems: NavItem[] = [
+const portalNavItems: NavItem[] = [
     {
-        title: 'Клиенти',
+        title: 'Компании',
         href: '/companies',
         icon: Users,
     },
     {
-        title: 'Магацини',
-        href: '/warehouses',
-        icon: Warehouse,
-    },
-    {
-        title: 'Артикли',
-        href: '/items',
-        icon: Package,
+        title: 'Документи',
+        href: '/documents',
+        icon: FileText,
     },
 ];
 </script>
