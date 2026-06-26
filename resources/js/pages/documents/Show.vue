@@ -32,7 +32,7 @@ function formatSize(bytes: number): string {
 </script>
 
 <template>
-    <Head :title="document.filename" />
+    <Head :title="document.original_filename" />
 
     <div class="mx-auto max-w-2xl p-6">
         <div class="mb-6 flex items-center justify-between">
@@ -52,7 +52,7 @@ function formatSize(bytes: number): string {
                             <FileText class="size-5 text-primary" />
                         </div>
                         <div>
-                            <CardTitle class="text-base">{{ document.filename }}</CardTitle>
+                            <CardTitle class="text-base">{{ document.original_filename }}</CardTitle>
                             <p class="text-sm text-muted-foreground">{{ formatSize(document.file_size) }}</p>
                         </div>
                     </div>

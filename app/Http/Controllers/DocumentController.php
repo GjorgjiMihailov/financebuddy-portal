@@ -60,7 +60,7 @@ class DocumentController extends Controller
             'type'           => $request->type,
             'status'         => DocumentStatus::Pending,
             'intake_channel' => IntakeChannel::Portal,
-            'filename'       => $file->getClientOriginalName(),
+            'original_filename' => $file->getClientOriginalName(),
             'storage_path'   => $path,
             'mime_type'      => $file->getMimeType(),
             'file_size'      => $file->getSize(),

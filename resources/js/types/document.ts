@@ -37,7 +37,7 @@ export type DocumentFile = {
     type: DocumentType;
     status: DocumentStatus;
     intake_channel: string;
-    filename: string;
+    original_filename: string;
     mime_type: string;
     file_size: number;
     ai_confidence: number | null;

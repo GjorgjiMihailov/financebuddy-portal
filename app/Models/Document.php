@@ -21,7 +21,7 @@ class Document extends Model
         'type',
         'status',
         'intake_channel',
-        'filename',
+        'original_filename',
         'storage_path',
         'mime_type',
         'file_size',
