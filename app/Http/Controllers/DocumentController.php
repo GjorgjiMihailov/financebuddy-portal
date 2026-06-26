@@ -20,8 +20,12 @@ class DocumentController extends Controller
     {
         $this->authorize('viewAny', Document::class);
 
-        $query = Document::with(['company:id,name', 'uploader:id,name'])
-            ->latest();
+        $user  = $request->user();
+        $query = Document::with(['company:id,name', 'uploader:id,name'])->latest();
+
+        if ($user->hasRole('company_admin')) {
+            $query->whereIn('company_id', $user->companies()->pluck('companies.id'));
+        }
 
         if ($request->company_id) {
             $query->where('company_id', $request->company_id);
@@ -31,9 +35,13 @@ class DocumentController extends Controller
             $query->where('status', $request->status);
         }
 
+        $companies = $user->hasRole('company_admin')
+            ? $user->companies()->orderBy('name')->get(['companies.id', 'companies.name'])
+            : Company::orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('documents/Index', [
             'documents' => $query->paginate(20)->withQueryString(),
-            'companies' => Company::orderBy('name')->get(['id', 'name']),
+            'companies' => $companies,
             'filters'   => $request->only(['company_id', 'status']),
         ]);
     }
@@ -42,16 +50,29 @@ class DocumentController extends Controller
     {
         $this->authorize('create', Document::class);
 
+        $user      = $request->user();
+        $companies = $user->hasRole('company_admin')
+            ? $user->companies()->orderBy('name')->get(['companies.id', 'companies.name'])
+            : Company::orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('documents/Create', [
-            'companies'         => Company::orderBy('name')->get(['id', 'name']),
+            'companies'         => $companies,
             'selectedCompanyId' => $request->integer('company_id') ?: null,
         ]);
     }
 
     public function store(StoreDocumentRequest $request): RedirectResponse
     {
-        $file      = $request->file('file');
         $companyId = $request->company_id;
+
+        if ($request->user()->hasRole('company_admin')) {
+            abort_unless(
+                $request->user()->companies()->where('companies.id', $companyId)->exists(),
+                403,
+            );
+        }
+
+        $file = $request->file('file');
 
         $googlePath = $file->store("documents/{$companyId}", 'google');
         $localPath  = $file->store("temp/documents", 'local');
