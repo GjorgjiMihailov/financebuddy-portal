@@ -1,0 +1,184 @@
+<script setup lang="ts">
+import { Head, Link, router } from '@inertiajs/vue3';
+import { FileText, Plus, Trash2 } from '@lucide/vue';
+import { ref } from 'vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import type { Company } from '@/types';
+import {
+    DOCUMENT_STATUS_LABELS,
+    DOCUMENT_STATUS_VARIANT,
+    DOCUMENT_TYPE_LABELS,
+    type DocumentFile,
+    type DocumentStatus,
+    type PaginatedDocuments,
+} from '@/types';
+
+defineOptions({
+    layout: {
+        breadcrumbs: [{ title: 'Документи', href: '/documents' }],
+    },
+});
+
+const props = defineProps<{
+    documents: PaginatedDocuments;
+    companies: Pick<Company, 'id' | 'name'>[];
+    filters: { company_id?: string; status?: string };
+}>();
+
+const deleteTarget = ref<DocumentFile | null>(null);
+
+function applyFilter(key: string, value: string) {
+    router.get('/documents', { ...props.filters, [key]: value || undefined }, {
+        preserveState: true,
+        replace: true,
+    });
+}
+
+function doDelete() {
+    if (!deleteTarget.value) return;
+    router.delete(`/documents/${deleteTarget.value.id}`, {
+        onFinish: () => { deleteTarget.value = null; },
+    });
+}
+
+function formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1048576) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+</script>
+
+<template>
+    <Head title="Документи" />
+
+    <div class="flex flex-col gap-6 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold">Документи</h1>
+                <p class="text-sm text-muted-foreground">
+                    {{ documents.total }} {{ documents.total === 1 ? 'документ' : 'документи' }}
+                </p>
+            </div>
+            <Button as-child>
+                <Link href="/documents/create">
+                    <Plus class="mr-2 size-4" />
+                    Прикачи документ
+                </Link>
+            </Button>
+        </div>
+
+        <!-- Филтри -->
+        <div class="flex flex-wrap gap-3">
+            <select
+                class="rounded-md border bg-background px-3 py-1.5 text-sm"
+                :value="filters.company_id ?? ''"
+                @change="applyFilter('company_id', ($event.target as HTMLSelectElement).value)"
+            >
+                <option value="">Сите компании</option>
+                <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
+
+            <select
+                class="rounded-md border bg-background px-3 py-1.5 text-sm"
+                :value="filters.status ?? ''"
+                @change="applyFilter('status', ($event.target as HTMLSelectElement).value)"
+            >
+                <option value="">Сите статуси</option>
+                <option v-for="(label, val) in DOCUMENT_STATUS_LABELS" :key="val" :value="val">{{ label }}</option>
+            </select>
+        </div>
+
+        <div class="rounded-lg border">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b bg-muted/50">
+                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Документ</th>
+                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компанија</th>
+                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Тип</th>
+                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Прикачено</th>
+                        <th class="w-16 px-4 py-3" />
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="documents.data.length === 0">
+                        <td colspan="6" class="py-16 text-center text-muted-foreground">
+                            <FileText class="mx-auto mb-3 size-10 opacity-30" />
+                            <p class="font-medium">Нема документи</p>
+                            <p class="text-xs">Прикачи го првиот документ со копчето горе</p>
+                        </td>
+                    </tr>
+                    <tr
+                        v-for="doc in documents.data"
+                        :key="doc.id"
+                        class="cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/30"
+                        @click="router.visit(`/documents/${doc.id}`)"
+                    >
+                        <td class="px-4 py-3">
+                            <p class="font-medium truncate max-w-48">{{ doc.filename }}</p>
+                            <p class="text-xs text-muted-foreground">{{ formatSize(doc.file_size) }}</p>
+                        </td>
+                        <td class="px-4 py-3 text-muted-foreground">{{ doc.company?.name ?? '—' }}</td>
+                        <td class="px-4 py-3 text-muted-foreground">{{ DOCUMENT_TYPE_LABELS[doc.type] }}</td>
+                        <td class="px-4 py-3">
+                            <Badge :variant="DOCUMENT_STATUS_VARIANT[doc.status as DocumentStatus]">
+                                {{ DOCUMENT_STATUS_LABELS[doc.status as DocumentStatus] }}
+                            </Badge>
+                        </td>
+                        <td class="px-4 py-3 text-muted-foreground text-xs">
+                            {{ new Date(doc.created_at).toLocaleDateString('mk-MK') }}
+                        </td>
+                        <td class="px-4 py-3" @click.stop>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="text-destructive hover:text-destructive"
+                                @click="deleteTarget = doc"
+                            >
+                                <Trash2 class="size-4" />
+                            </Button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div v-if="documents.last_page > 1" class="flex justify-center gap-1">
+            <Button
+                v-for="link in documents.links"
+                :key="link.label"
+                :variant="link.active ? 'default' : 'outline'"
+                size="sm"
+                :disabled="!link.url"
+                v-html="link.label"
+                @click="link.url && router.visit(link.url, { preserveScroll: true })"
+            />
+        </div>
+    </div>
+
+    <Dialog :open="!!deleteTarget" @update:open="(v) => { if (!v) deleteTarget = null }">
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Избриши документ</DialogTitle>
+                <DialogDescription>
+                    Дали сте сигурни дека сакате да го избришете
+                    <strong>{{ deleteTarget?.filename }}</strong>?
+                    Оваа акција не може да се поврати.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button variant="outline" @click="deleteTarget = null">Откажи</Button>
+                <Button variant="destructive" @click="doDelete">Избриши</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+</template>

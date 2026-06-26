@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\DocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -9,6 +10,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
 
     Route::resource('companies', CompanyController::class);
+    Route::resource('documents', DocumentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
 });
 
 require __DIR__.'/settings.php';
