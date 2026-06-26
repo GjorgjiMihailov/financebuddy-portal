@@ -14,7 +14,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Компании', href: '/companies' },
-            { title: props.company?.name ?? 'Детали', href: '#' },
+            { title: 'Детали', href: '#' },
         ],
     },
 });
