@@ -42,8 +42,8 @@ function doDelete() {
             <div>
                 <h1 class="text-2xl font-semibold">Компании</h1>
                 <p class="text-sm text-muted-foreground">
-                    {{ companies.meta.total }}
-                    {{ companies.meta.total === 1 ? 'компанија' : 'компании' }}
+                    {{ companies.total }}
+                    {{ companies.total === 1 ? 'компанија' : 'компании' }}
                 </p>
             </div>
             <Button as-child>
@@ -110,9 +110,9 @@ function doDelete() {
             </table>
         </div>
 
-        <div v-if="companies.meta.last_page > 1" class="flex justify-center gap-1">
+        <div v-if="companies.last_page > 1" class="flex justify-center gap-1">
             <Button
-                v-for="link in companies.meta.links"
+                v-for="link in companies.links"
                 :key="link.label"
                 :variant="link.active ? 'default' : 'outline'"
                 size="sm"

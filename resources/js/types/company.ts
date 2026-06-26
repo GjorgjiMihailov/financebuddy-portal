@@ -15,20 +15,13 @@ export type Company = {
 
 export type PaginatedCompanies = {
     data: Company[];
-    links: {
-        first: string;
-        last: string;
-        prev: string | null;
-        next: string | null;
-    };
-    meta: {
-        current_page: number;
-        from: number;
-        last_page: number;
-        links: { url: string | null; label: string; active: boolean }[];
-        path: string;
-        per_page: number;
-        to: number;
-        total: number;
-    };
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    links: { url: string | null; label: string; active: boolean }[];
+    next_page_url: string | null;
+    prev_page_url: string | null;
 };
