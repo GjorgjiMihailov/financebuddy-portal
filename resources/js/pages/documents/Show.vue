@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeft, CheckCircle, Clock, FileText } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,11 @@ const ext = props.document.extraction;
 const hasExtraction = !!ext;
 const isProcessing = ['pending', 'ai_processing'].includes(props.document.status);
 const isRejected = props.document.status === 'rejected';
+
+const verifyForm = useForm({});
+function verify() {
+    verifyForm.post(`/documents/${props.document.id}/verify`);
+}
 </script>
 
 <template>
@@ -252,7 +257,7 @@ const isRejected = props.document.status === 'rejected';
                         <p class="text-xs text-muted-foreground">Тамара треба да ги потврди извадените податоци.</p>
                     </div>
                 </div>
-                <Button size="sm">
+                <Button size="sm" :disabled="verifyForm.processing" @click="verify">
                     Верифицирај
                 </Button>
             </div>

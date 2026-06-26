@@ -84,6 +84,23 @@ class DocumentController extends Controller
         ]);
     }
 
+    public function verify(Document $document, Request $request): RedirectResponse
+    {
+        $this->authorize('verify', $document);
+
+        $document->update([
+            'status'      => \App\Enums\DocumentStatus::Verified,
+            'verified_by' => $request->user()->id,
+            'verified_at' => now(),
+        ]);
+
+        $document->extraction?->update(['is_confirmed' => true]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Документот е верификуван.']);
+
+        return to_route('documents.show', $document);
+    }
+
     public function destroy(Document $document): RedirectResponse
     {
         $this->authorize('delete', $document);

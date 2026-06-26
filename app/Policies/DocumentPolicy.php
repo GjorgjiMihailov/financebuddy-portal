@@ -23,6 +23,12 @@ class DocumentPolicy
         return $user->hasAnyRole(['admin', 'accountant']);
     }
 
+    public function verify(User $user, Document $document): bool
+    {
+        return $user->hasAnyRole(['admin', 'accountant'])
+            && $document->status === \App\Enums\DocumentStatus::AiProcessed;
+    }
+
     public function delete(User $user, Document $document): bool
     {
         return $user->hasRole('admin');
