@@ -22,7 +22,10 @@ class ProcessDocumentJob implements ShouldQueue
     public int $tries = 2;
     public int $timeout = 120;
 
-    public function __construct(public Document $document) {}
+    public function __construct(
+        public Document $document,
+        public ?string $localTempPath = null,
+    ) {}
 
     public function handle(): void
     {
@@ -31,8 +34,17 @@ class ProcessDocumentJob implements ShouldQueue
         $startedAt = now();
 
         try {
-            $fileContent = Storage::disk('google')->get($this->document->storage_path);
-            $base64      = base64_encode($fileContent);
+            if ($this->localTempPath && Storage::disk('local')->exists($this->localTempPath)) {
+                $fileContent = Storage::disk('local')->get($this->localTempPath);
+            } else {
+                $fileContent = Storage::disk('google')->get($this->document->storage_path);
+            }
+
+            if (empty($fileContent)) {
+                throw new \RuntimeException("Cannot read file content from storage: {$this->document->storage_path}");
+            }
+
+            $base64 = base64_encode($fileContent);
 
             $accounts     = ChartOfAccount::where('allows_posting', true)
                 ->where('is_active', true)
@@ -128,6 +140,8 @@ class ProcessDocumentJob implements ShouldQueue
                 'status'        => AiProcessingStatus::Success,
             ]);
 
+            $this->cleanupLocalTemp();
+
         } catch (\Throwable $e) {
             Log::error('ProcessDocumentJob failed', [
                 'document_id' => $this->document->id,
@@ -147,7 +161,16 @@ class ProcessDocumentJob implements ShouldQueue
                 'error_message' => $e->getMessage(),
             ]);
 
+            $this->cleanupLocalTemp();
+
             throw $e;
+        }
+    }
+
+    private function cleanupLocalTemp(): void
+    {
+        if ($this->localTempPath) {
+            Storage::disk('local')->delete($this->localTempPath);
         }
     }
 

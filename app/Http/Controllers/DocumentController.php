@@ -52,7 +52,9 @@ class DocumentController extends Controller
     {
         $file      = $request->file('file');
         $companyId = $request->company_id;
-        $path      = $file->store("documents/{$companyId}", 'google');
+
+        $googlePath = $file->store("documents/{$companyId}", 'google');
+        $localPath  = $file->store("temp/documents", 'local');
 
         $document = Document::create([
             'company_id'     => $companyId,
@@ -61,12 +63,12 @@ class DocumentController extends Controller
             'status'         => DocumentStatus::Pending,
             'intake_channel' => IntakeChannel::Portal,
             'original_filename' => $file->getClientOriginalName(),
-            'storage_path'   => $path,
+            'storage_path'   => $googlePath,
             'mime_type'      => $file->getMimeType(),
             'file_size'      => $file->getSize(),
         ]);
 
-        ProcessDocumentJob::dispatch($document);
+        ProcessDocumentJob::dispatch($document, $localPath);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Документот е прикачен и се праќа на AI обработка.']);
 
