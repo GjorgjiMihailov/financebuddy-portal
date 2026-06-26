@@ -3,10 +3,16 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Google\Client as GoogleClient;
+use Google\Service\Drive as GoogleDrive;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use League\Flysystem\Filesystem;
+use Masbug\Flysystem\GoogleDriveAdapter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,11 +30,27 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->registerGoogleDrive();
     }
 
     /**
      * Configure default behaviors for production-ready applications.
      */
+    protected function registerGoogleDrive(): void
+    {
+        Storage::extend('google', function ($app, $config) {
+            $client = new GoogleClient();
+            $client->setAuthConfig(storage_path('app/google-service-account.json'));
+            $client->addScope(GoogleDrive::DRIVE);
+
+            $service = new GoogleDrive($client);
+            $adapter = new GoogleDriveAdapter($service, $config['folder_id']);
+            $driver  = new Filesystem($adapter);
+
+            return new FilesystemAdapter($driver, $adapter, $config);
+        });
+    }
+
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);

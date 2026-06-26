@@ -52,7 +52,7 @@ class DocumentController extends Controller
     {
         $file      = $request->file('file');
         $companyId = $request->company_id;
-        $path      = $file->store("documents/{$companyId}", 'private');
+        $path      = $file->store("documents/{$companyId}", 'google');
 
         $document = Document::create([
             'company_id'     => $companyId,
@@ -86,7 +86,7 @@ class DocumentController extends Controller
     {
         $this->authorize('delete', $document);
 
-        Storage::disk('private')->delete($document->storage_path);
+        Storage::disk('google')->delete($document->storage_path);
         $document->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Документот е избришан.']);

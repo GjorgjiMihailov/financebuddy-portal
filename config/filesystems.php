@@ -47,6 +47,11 @@ return [
             'report' => false,
         ],
 
+        'google' => [
+            'driver'    => 'google',
+            'folder_id' => env('GOOGLE_DRIVE_FOLDER_ID'),
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
