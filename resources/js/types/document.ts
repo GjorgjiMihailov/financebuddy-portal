@@ -28,6 +28,40 @@ export const DOCUMENT_STATUS_VARIANT: Record<DocumentStatus, 'default' | 'second
     rejected:      'destructive',
 };
 
+export type DocumentExtraction = {
+    id: number;
+    document_id: number;
+    vendor_name: string | null;
+    vendor_tax_id: string | null;
+    vendor_vat_number: string | null;
+    customer_name: string | null;
+    customer_tax_id: string | null;
+    document_number: string | null;
+    document_date: string | null;
+    due_date: string | null;
+    currency: string;
+    subtotal: string;
+    vat_amount: string;
+    total_amount: string;
+    is_confirmed: boolean;
+};
+
+export type DocumentLineItem = {
+    id: number;
+    sort_order: number;
+    description: string;
+    quantity: string | null;
+    unit: string | null;
+    unit_price: string | null;
+    vat_rate: string;
+    vat_amount: string;
+    total_amount: string;
+    suggested_account_code: string | null;
+    confirmed_account_code: string | null;
+    ai_confidence: number | null;
+    suggested_account?: { code: string; name: string } | null;
+};
+
 export type DocumentFile = {
     id: number;
     company_id: number;
@@ -44,6 +78,8 @@ export type DocumentFile = {
     verified_by: number | null;
     created_at: string;
     updated_at: string;
+    extraction?: DocumentExtraction | null;
+    line_items?: DocumentLineItem[];
 };
 
 export type PaginatedDocuments = {
