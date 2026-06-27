@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DocumentStatus;
 use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
 use App\Models\Company;
@@ -47,8 +48,24 @@ class CompanyController extends Controller
     {
         $this->authorize('view', $company);
 
+        $docs = $company->documents();
+
+        $stats = [
+            'total'      => $docs->count(),
+            'processing' => (clone $docs)->whereIn('status', [DocumentStatus::Pending, DocumentStatus::AiProcessing])->count(),
+            'awaiting'   => (clone $docs)->where('status', DocumentStatus::AiProcessed)->count(),
+            'verified'   => (clone $docs)->where('status', DocumentStatus::Verified)->count(),
+        ];
+
+        $documents = $company->documents()
+            ->with('uploader:id,name')
+            ->latest()
+            ->paginate(15);
+
         return Inertia::render('companies/Show', [
-            'company' => $company->load('creator'),
+            'company'   => $company->load('creator'),
+            'stats'     => $stats,
+            'documents' => $documents,
         ]);
     }
 
