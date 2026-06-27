@@ -14,9 +14,6 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Документи', href: '/documents' },
-            ...(props.entry.document
-                ? [{ title: props.entry.document.original_filename, href: `/documents/${props.entry.document_id}` }]
-                : []),
             { title: 'Книжење', href: '#' },
         ],
     },
