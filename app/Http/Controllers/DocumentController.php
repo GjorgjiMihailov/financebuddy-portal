@@ -8,8 +8,12 @@ use App\Http\Requests\StoreDocumentRequest;
 use App\Jobs\ProcessDocumentJob;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\User;
+use App\Notifications\DocumentUploadedNotification;
+use App\Notifications\DocumentVerifiedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -91,6 +95,10 @@ class DocumentController extends Controller
 
         ProcessDocumentJob::dispatch($document, $localPath);
 
+        $document->load(['company', 'uploader']);
+        $recipients = User::role(['admin', 'accountant'])->get();
+        Notification::send($recipients, new DocumentUploadedNotification($document));
+
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Документот е прикачен и се праќа на AI обработка.']);
 
         return to_route('documents.show', $document);
@@ -116,6 +124,10 @@ class DocumentController extends Controller
         ]);
 
         $document->extraction?->update(['is_confirmed' => true]);
+
+        $document->load(['company.users', 'verifier']);
+        $recipients = $document->company->users->filter(fn ($u) => $u->hasRole('company_admin'));
+        Notification::send($recipients, new DocumentVerifiedNotification($document));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Документот е верификуван.']);
 
