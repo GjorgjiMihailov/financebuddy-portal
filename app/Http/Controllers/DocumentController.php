@@ -104,7 +104,7 @@ class DocumentController extends Controller
         return to_route('documents.show', $document);
     }
 
-    public function show(Document $document): Response
+    public function show(Request $request, Document $document): Response
     {
         $this->authorize('view', $document);
 
