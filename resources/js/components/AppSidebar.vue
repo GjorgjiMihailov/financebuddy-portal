@@ -18,26 +18,20 @@ import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 const page = usePage();
-const isAdmin = computed(() => page.props.auth?.user?.roles?.includes('admin') ?? false);
+const roles = computed(() => page.props.auth?.user?.roles ?? []);
+const isAdmin = computed(() => roles.value.includes('admin'));
+const isCompanyAdmin = computed(() => roles.value.includes('company_admin'));
+
+const portalNavItems = computed<NavItem[]>(() => [
+    ...(!isCompanyAdmin.value ? [{ title: 'Компании', href: '/companies', icon: Building2 }] : []),
+    { title: 'Документи', href: '/documents', icon: FileText },
+]);
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Контролна табла',
         href: dashboard(),
         icon: LayoutGrid,
-    },
-];
-
-const portalNavItems: NavItem[] = [
-    {
-        title: 'Компании',
-        href: '/companies',
-        icon: Building2,
-    },
-    {
-        title: 'Документи',
-        href: '/documents',
-        icon: FileText,
     },
 ];
 
