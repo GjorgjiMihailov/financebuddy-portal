@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, CheckCircle, Clock, FileText } from '@lucide/vue';
+import { ArrowLeft, BookOpen, CheckCircle, Clock, FileText } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +8,10 @@ import {
     DOCUMENT_STATUS_LABELS,
     DOCUMENT_STATUS_VARIANT,
     DOCUMENT_TYPE_LABELS,
+    JOURNAL_STATUS_LABELS,
     type DocumentFile,
     type DocumentStatus,
+    type JournalEntry,
 } from '@/types';
 
 defineOptions({
@@ -23,6 +25,8 @@ defineOptions({
 
 const props = defineProps<{
     document: DocumentFile;
+    journalEntry: Pick<JournalEntry, 'id' | 'status'> | null;
+    canBook: boolean;
 }>();
 
 function formatSize(bytes: number): string {
@@ -259,6 +263,47 @@ function verify() {
                 </div>
                 <Button size="sm" :disabled="verifyForm.processing" @click="verify">
                     Верифицирај
+                </Button>
+            </div>
+
+            <!-- Книжење — постои -->
+            <div
+                v-else-if="journalEntry"
+                class="flex items-center justify-between rounded-lg border bg-card p-4"
+            >
+                <div class="flex items-center gap-3">
+                    <BookOpen class="size-5 text-primary" />
+                    <div>
+                        <p class="text-sm font-medium">Книжење</p>
+                        <p class="text-xs text-muted-foreground">
+                            Статус: {{ JOURNAL_STATUS_LABELS[journalEntry.status] }}
+                        </p>
+                    </div>
+                </div>
+                <Button size="sm" variant="outline" as-child>
+                    <Link :href="`/journal-entries/${journalEntry.id}`">
+                        <BookOpen class="mr-2 size-4" />
+                        Отвори книжење
+                    </Link>
+                </Button>
+            </div>
+
+            <!-- Книжење — создај ново -->
+            <div
+                v-else-if="document.status === 'verified' && canBook"
+                class="flex items-center justify-between rounded-lg border bg-card p-4"
+            >
+                <div class="flex items-center gap-3">
+                    <BookOpen class="size-5 text-muted-foreground" />
+                    <div>
+                        <p class="text-sm font-medium">Прокнижи документот</p>
+                        <p class="text-xs text-muted-foreground">Создај книжење во главната книга.</p>
+                    </div>
+                </div>
+                <Button size="sm" as-child>
+                    <Link :href="`/documents/${document.id}/journal-entry/create`">
+                        Прокнижи
+                    </Link>
                 </Button>
             </div>
 

@@ -1,0 +1,40 @@
+export type JournalEntryStatus = 'draft' | 'posted';
+
+export const JOURNAL_STATUS_LABELS: Record<JournalEntryStatus, string> = {
+    draft:  'Нацрт',
+    posted: 'Прокнижено',
+};
+
+export const JOURNAL_STATUS_VARIANT: Record<JournalEntryStatus, 'outline' | 'default'> = {
+    draft:  'outline',
+    posted: 'default',
+};
+
+export type JournalEntryLine = {
+    id: number;
+    sort_order: number;
+    account_code: string;
+    account?: { code: string; name: string } | null;
+    debit: string;
+    credit: string;
+    description: string | null;
+};
+
+export type JournalEntry = {
+    id: number;
+    document_id: number | null;
+    company_id: number;
+    entry_date: string;
+    description: string;
+    reference: string | null;
+    status: JournalEntryStatus;
+    created_by: number;
+    posted_by: number | null;
+    posted_at: string | null;
+    created_at: string;
+    company?: { id: number; name: string } | null;
+    document?: { id: number; original_filename: string } | null;
+    creator?: { id: number; name: string } | null;
+    poster?: { id: number; name: string } | null;
+    lines?: JournalEntryLine[];
+};

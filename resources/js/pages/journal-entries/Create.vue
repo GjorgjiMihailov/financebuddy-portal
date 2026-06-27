@@ -1,0 +1,272 @@
+<script setup lang="ts">
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Plus, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
+import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import type { DocumentFile } from '@/types';
+
+type AccountGroup = {
+    [classNum: string]: { code: string; name: string; class: number }[];
+};
+
+const CLASS_LABELS: Record<string, string> = {
+    '1': '1 — Основни средства',
+    '2': '2 — Залихи',
+    '3': '3 — Побарувања и парични средства',
+    '4': '4 — Обврски',
+    '5': '5 — Капитал и резерви',
+    '6': '6 — Расходи',
+    '7': '7 — Приходи',
+    '8': '8 — Резултат',
+    '9': '9 — Вонбилансна евиденција',
+};
+
+const props = defineProps<{
+    document: DocumentFile;
+    accounts: AccountGroup;
+    prefillLines: { account_code: string; description: string; debit: number; credit: number }[];
+}>();
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            { title: 'Документи', href: '/documents' },
+            { title: props.document.original_filename, href: `/documents/${props.document.id}` },
+            { title: 'Книжење', href: '#' },
+        ],
+    },
+});
+
+const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 0 });
+
+const form = useForm({
+    description:      props.document.extraction?.vendor_name
+        ? `Фактура — ${props.document.extraction.vendor_name}`
+        : '',
+    entry_date:       props.document.extraction?.document_date ?? new Date().toISOString().slice(0, 10),
+    reference:        props.document.extraction?.document_number ?? '',
+    post_immediately: false,
+    lines:            props.prefillLines.length >= 2
+        ? props.prefillLines.map(l => ({ ...l }))
+        : [emptyLine(), emptyLine()],
+});
+
+const totalDebit  = computed(() => form.lines.reduce((s, l) => s + Number(l.debit  || 0), 0));
+const totalCredit = computed(() => form.lines.reduce((s, l) => s + Number(l.credit || 0), 0));
+const isBalanced  = computed(() => Math.abs(totalDebit.value - totalCredit.value) < 0.005);
+
+function addLine() {
+    form.lines.push(emptyLine());
+}
+
+function removeLine(i: number) {
+    if (form.lines.length > 2) form.lines.splice(i, 1);
+}
+
+function fmt(n: number) {
+    return n.toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function submitDraft() {
+    form.post_immediately = false;
+    form.post(`/documents/${props.document.id}/journal-entry`);
+}
+
+function submitPost() {
+    form.post_immediately = true;
+    form.post(`/documents/${props.document.id}/journal-entry`);
+}
+</script>
+
+<template>
+    <Head title="Ново книжење" />
+
+    <div class="flex flex-col gap-6 p-6">
+        <div>
+            <h1 class="text-2xl font-semibold">Ново книжење</h1>
+            <p class="text-sm text-muted-foreground">
+                {{ document.original_filename }} —
+                <Link :href="`/companies/${document.company_id}`" class="hover:underline">
+                    {{ document.company?.name }}
+                </Link>
+            </p>
+        </div>
+
+        <form class="flex flex-col gap-6" @submit.prevent>
+
+            <!-- Header fields -->
+            <div class="grid gap-4 sm:grid-cols-3">
+                <div class="sm:col-span-2 grid gap-2">
+                    <Label for="description">Опис <span class="text-destructive">*</span></Label>
+                    <Input
+                        id="description"
+                        v-model="form.description"
+                        placeholder="пр. Влезна фактура — Добавувач"
+                        :class="{ 'border-destructive': form.errors.description }"
+                    />
+                    <InputError :message="form.errors.description" />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="entry_date">Датум <span class="text-destructive">*</span></Label>
+                    <Input
+                        id="entry_date"
+                        v-model="form.entry_date"
+                        type="date"
+                        :class="{ 'border-destructive': form.errors.entry_date }"
+                    />
+                    <InputError :message="form.errors.entry_date" />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="reference">Референца</Label>
+                    <Input
+                        id="reference"
+                        v-model="form.reference"
+                        placeholder="бр. на фактура"
+                    />
+                </div>
+            </div>
+
+            <!-- Lines table -->
+            <div>
+                <div class="mb-2 flex items-center justify-between">
+                    <Label>Ставки <span class="text-destructive">*</span></Label>
+                </div>
+
+                <div class="rounded-lg border overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b bg-muted/50">
+                                <th class="px-3 py-2 text-left font-medium text-muted-foreground w-56">Сметка</th>
+                                <th class="px-3 py-2 text-left font-medium text-muted-foreground">Опис</th>
+                                <th class="px-3 py-2 text-right font-medium text-muted-foreground w-32">Дебит</th>
+                                <th class="px-3 py-2 text-right font-medium text-muted-foreground w-32">Кредит</th>
+                                <th class="w-10" />
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="(line, i) in form.lines"
+                                :key="i"
+                                class="border-b last:border-0"
+                            >
+                                <td class="px-3 py-2">
+                                    <select
+                                        v-model="line.account_code"
+                                        class="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        :class="{ 'border-destructive': form.errors[`lines.${i}.account_code`] }"
+                                    >
+                                        <option value="">— изберете —</option>
+                                        <optgroup
+                                            v-for="(accs, cls) in accounts"
+                                            :key="cls"
+                                            :label="CLASS_LABELS[cls] ?? `Класа ${cls}`"
+                                        >
+                                            <option
+                                                v-for="acc in accs"
+                                                :key="acc.code"
+                                                :value="acc.code"
+                                            >
+                                                {{ acc.code }} — {{ acc.name }}
+                                            </option>
+                                        </optgroup>
+                                    </select>
+                                </td>
+                                <td class="px-3 py-2">
+                                    <Input
+                                        v-model="line.description"
+                                        placeholder="опционален опис"
+                                        class="h-8 text-sm"
+                                    />
+                                </td>
+                                <td class="px-3 py-2">
+                                    <Input
+                                        v-model.number="line.debit"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        class="h-8 text-right text-sm"
+                                        :class="{ 'border-destructive': form.errors[`lines.${i}.debit`] }"
+                                    />
+                                </td>
+                                <td class="px-3 py-2">
+                                    <Input
+                                        v-model.number="line.credit"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        class="h-8 text-right text-sm"
+                                        :class="{ 'border-destructive': form.errors[`lines.${i}.credit`] }"
+                                    />
+                                </td>
+                                <td class="px-3 py-2">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-7 text-muted-foreground hover:text-destructive"
+                                        :disabled="form.lines.length <= 2"
+                                        @click="removeLine(i)"
+                                    >
+                                        <Trash2 class="size-3.5" />
+                                    </Button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="border-t bg-muted/30">
+                                <td colspan="2" class="px-3 py-2">
+                                    <Button type="button" variant="ghost" size="sm" class="h-7 text-xs" @click="addLine">
+                                        <Plus class="mr-1 size-3" />
+                                        Додај ред
+                                    </Button>
+                                </td>
+                                <td class="px-3 py-2 text-right font-semibold tabular-nums">
+                                    {{ fmt(totalDebit) }}
+                                </td>
+                                <td class="px-3 py-2 text-right font-semibold tabular-nums">
+                                    {{ fmt(totalCredit) }}
+                                </td>
+                                <td />
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <InputError :message="(form.errors as any).lines" class="mt-1" />
+
+                <div
+                    v-if="totalDebit > 0 || totalCredit > 0"
+                    class="mt-2 text-xs"
+                    :class="isBalanced ? 'text-green-600' : 'text-destructive'"
+                >
+                    {{ isBalanced ? '✓ Книжењето е балансирано' : `Разлика: ${fmt(Math.abs(totalDebit - totalCredit))}` }}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3 border-t pt-4">
+                <Button type="button" variant="outline" as-child>
+                    <Link :href="`/documents/${document.id}`">Откажи</Link>
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="form.processing"
+                    @click="submitDraft"
+                >
+                    {{ form.processing && !form.post_immediately ? 'Се зачувува...' : 'Зачувај нацрт' }}
+                </Button>
+                <Button
+                    type="button"
+                    :disabled="form.processing || !isBalanced"
+                    @click="submitPost"
+                >
+                    {{ form.processing && form.post_immediately ? 'Се прокнижува...' : 'Прокнижи' }}
+                </Button>
+            </div>
+        </form>
+    </div>
+</template>

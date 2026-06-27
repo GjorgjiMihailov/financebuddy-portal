@@ -108,8 +108,14 @@ class DocumentController extends Controller
     {
         $this->authorize('view', $document);
 
+        $document->load(['company:id,name', 'uploader:id,name', 'extraction', 'lineItems.suggestedAccount']);
+
+        $journalEntry = $document->journalEntries()->first(['id', 'status']);
+
         return Inertia::render('documents/Show', [
-            'document' => $document->load(['company:id,name', 'uploader:id,name', 'extraction', 'lineItems.suggestedAccount']),
+            'document'     => $document,
+            'journalEntry' => $journalEntry,
+            'canBook'      => $request->user()->can('create', \App\Models\JournalEntry::class),
         ]);
     }
 
