@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DocumentController extends Controller
 {
@@ -117,6 +118,25 @@ class DocumentController extends Controller
             'journalEntry' => $journalEntry,
             'canBook'      => $request->user()->can('create', \App\Models\JournalEntry::class),
         ]);
+    }
+
+    public function file(Request $request, Document $document): StreamedResponse
+    {
+        $this->authorize('view', $document);
+
+        $stream = Storage::disk('google')->readStream($document->storage_path);
+
+        abort_unless($stream !== false && $stream !== null, 404, 'Фајлот не е достапен.');
+
+        return response()->stream(
+            fn () => fpassthru($stream),
+            200,
+            [
+                'Content-Type'        => $document->mime_type,
+                'Content-Disposition' => 'inline; filename="' . rawurlencode($document->original_filename) . '"',
+                'Cache-Control'       => 'private, max-age=3600',
+            ]
+        );
     }
 
     public function verify(Document $document, Request $request): RedirectResponse

@@ -14,6 +14,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('companies', CompanyController::class);
     Route::resource('documents', DocumentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+    Route::get('documents/{document}/file', [DocumentController::class, 'file'])->name('documents.file');
     Route::post('documents/{document}/verify', [DocumentController::class, 'verify'])->name('documents.verify');
 
     Route::resource('users', UserController::class)->except(['show']);

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowLeft, BookOpen, CheckCircle, Clock, FileText } from '@lucide/vue';
+import { ArrowLeft, BookOpen, CheckCircle, ChevronDown, ChevronUp, Clock, FileText } from '@lucide/vue';
+import { ref } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +54,10 @@ const verifyForm = useForm({});
 function verify() {
     verifyForm.post(`/documents/${props.document.id}/verify`);
 }
+
+const showPreview = ref(false);
+const isPdf   = props.document.mime_type === 'application/pdf';
+const isImage = props.document.mime_type.startsWith('image/');
 </script>
 
 <template>
@@ -111,6 +116,38 @@ function verify() {
                 </dl>
             </CardContent>
         </Card>
+
+        <!-- Preview toggle -->
+        <div v-if="isPdf || isImage" class="rounded-lg border overflow-hidden">
+            <button
+                type="button"
+                class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/50 transition-colors"
+                @click="showPreview = !showPreview"
+            >
+                <span class="flex items-center gap-2">
+                    <FileText class="size-4 text-muted-foreground" />
+                    Прегледај документ
+                </span>
+                <ChevronUp v-if="showPreview" class="size-4 text-muted-foreground" />
+                <ChevronDown v-else class="size-4 text-muted-foreground" />
+            </button>
+            <div v-if="showPreview" class="border-t">
+                <iframe
+                    v-if="isPdf"
+                    :src="`/documents/${document.id}/file`"
+                    class="w-full"
+                    style="height: 700px;"
+                    frameborder="0"
+                />
+                <div v-else-if="isImage" class="flex justify-center bg-muted/30 p-4">
+                    <img
+                        :src="`/documents/${document.id}/file`"
+                        :alt="document.original_filename"
+                        class="max-w-full rounded shadow-sm"
+                    />
+                </div>
+            </div>
+        </div>
 
         <!-- Во обработка -->
         <div
