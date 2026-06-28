@@ -23,6 +23,7 @@ class Document extends Model
         'intake_channel',
         'original_filename',
         'storage_path',
+        'drive_file_id',
         'mime_type',
         'file_size',
         'ai_raw_response',

@@ -11,6 +11,7 @@ use App\Models\Document;
 use App\Models\User;
 use App\Notifications\DocumentUploadedNotification;
 use App\Notifications\DocumentVerifiedNotification;
+use Google\Service\Drive as GoogleDrive;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
@@ -82,6 +83,8 @@ class DocumentController extends Controller
         $googlePath = $file->store("documents/{$companyId}", 'google');
         $localPath  = $file->store("temp/documents", 'local');
 
+        $driveFileId = $this->resolveDriveFileId($file->getClientOriginalName());
+
         $document = Document::create([
             'company_id'     => $companyId,
             'uploaded_by'    => $request->user()->id,
@@ -90,6 +93,7 @@ class DocumentController extends Controller
             'intake_channel' => IntakeChannel::Portal,
             'original_filename' => $file->getClientOriginalName(),
             'storage_path'   => $googlePath,
+            'drive_file_id'  => $driveFileId,
             'mime_type'      => $file->getMimeType(),
             'file_size'      => $file->getSize(),
         ]);
@@ -124,12 +128,21 @@ class DocumentController extends Controller
     {
         $this->authorize('view', $document);
 
-        $stream = Storage::disk('google')->readStream($document->storage_path);
+        abort_unless($document->drive_file_id, 404, 'Фајлот не е достапен за преглед.');
 
-        abort_unless($stream !== false && $stream !== null, 404, 'Фајлот не е достапен.');
+        $service    = app(GoogleDrive::class);
+        $httpClient = $service->getClient()->authorize();
+        $driveUrl   = "https://www.googleapis.com/drive/v3/files/{$document->drive_file_id}?alt=media";
+        $httpResponse = $httpClient->request('GET', $driveUrl, ['stream' => true]);
+        $body = $httpResponse->getBody();
 
         return response()->stream(
-            fn () => fpassthru($stream),
+            function () use ($body) {
+                while (!$body->eof()) {
+                    echo $body->read(8192);
+                    flush();
+                }
+            },
             200,
             [
                 'Content-Type'        => $document->mime_type,
@@ -137,6 +150,23 @@ class DocumentController extends Controller
                 'Cache-Control'       => 'private, max-age=3600',
             ]
         );
+    }
+
+    private function resolveDriveFileId(string $originalFilename): ?string
+    {
+        try {
+            $service = app(GoogleDrive::class);
+            $safe    = str_replace("'", "\\'", $originalFilename);
+            $files   = $service->files->listFiles([
+                'q'        => "name = '{$safe}' and trashed = false",
+                'fields'   => 'files(id)',
+                'pageSize' => 1,
+                'orderBy'  => 'createdTime desc',
+            ]);
+            return $files->getFiles()[0]?->getId();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function verify(Document $document, Request $request): RedirectResponse

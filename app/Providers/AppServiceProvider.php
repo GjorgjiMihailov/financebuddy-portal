@@ -16,12 +16,14 @@ use Masbug\Flysystem\GoogleDriveAdapter;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        $this->app->singleton(GoogleDrive::class, function () {
+            $client = new GoogleClient();
+            $client->setAuthConfig(storage_path('app/google-service-account.json'));
+            $client->addScope(GoogleDrive::DRIVE);
+            return new GoogleDrive($client);
+        });
     }
 
     /**
@@ -33,17 +35,10 @@ class AppServiceProvider extends ServiceProvider
         $this->registerGoogleDrive();
     }
 
-    /**
-     * Configure default behaviors for production-ready applications.
-     */
     protected function registerGoogleDrive(): void
     {
         Storage::extend('google', function ($app, $config) {
-            $client = new GoogleClient();
-            $client->setAuthConfig(storage_path('app/google-service-account.json'));
-            $client->addScope(GoogleDrive::DRIVE);
-
-            $service = new GoogleDrive($client);
+            $service = $app->make(GoogleDrive::class);
             $adapter = new GoogleDriveAdapter($service, $config['folder_id']);
             $driver  = new Filesystem($adapter);
 
