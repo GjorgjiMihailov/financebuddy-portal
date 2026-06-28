@@ -130,7 +130,7 @@ class DocumentController extends Controller
 
         $fileId = $document->drive_file_id
             ?? $this->resolveFileIdByPath($document->storage_path)
-            ?? $this->resolveFileIdBySearch($document->original_filename);
+            ?? $this->resolveFileIdBySearch($document->storage_path);
 
         if ($fileId && !$document->drive_file_id) {
             $document->updateQuietly(['drive_file_id' => $fileId]);
@@ -176,25 +176,25 @@ class DocumentController extends Controller
         return null;
     }
 
-    private function resolveFileIdBySearch(string $originalFilename): ?string
+    private function resolveFileIdBySearch(string $storedPath): ?string
     {
         try {
-            $service      = app(GoogleDrive::class);
-            $rootFolderId = config('filesystems.disks.google.folder_id');
-            $safe         = str_replace("'", "\\'", $originalFilename);
-            $fileList     = $service->files->listFiles([
-                'q'                         => "name = '{$safe}' and '{$rootFolderId}' in ancestors and trashed = false",
+            $service  = app(GoogleDrive::class);
+            $filename = basename($storedPath);
+            $safe     = str_replace("'", "\\'", $filename);
+            $fileList = $service->files->listFiles([
+                'q'                         => "name = '{$safe}' and trashed = false",
                 'fields'                    => 'files(id, name)',
-                'pageSize'                  => 5,
+                'pageSize'                  => 1,
                 'orderBy'                   => 'createdTime desc',
                 'includeItemsFromAllDrives' => true,
                 'supportsAllDrives'         => true,
             ])->getFiles();
             \Log::info('[Drive] resolveFileIdBySearch', [
-                'filename'     => $originalFilename,
-                'rootFolderId' => $rootFolderId,
-                'count'        => count($fileList ?? []),
-                'id'           => !empty($fileList) ? $fileList[0]->getId() : null,
+                'storedPath' => $storedPath,
+                'filename'   => $filename,
+                'count'      => count($fileList ?? []),
+                'id'         => !empty($fileList) ? $fileList[0]->getId() : null,
             ]);
             return !empty($fileList) ? $fileList[0]->getId() : null;
         } catch (\Throwable $e) {
