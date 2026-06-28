@@ -80,10 +80,19 @@ class DocumentController extends Controller
 
         $file = $request->file('file');
 
-        $googlePath = $file->store("documents/{$companyId}", 'google');
-        $localPath  = $file->store("temp/documents", 'local');
+        $hashName         = $file->hashName();
+        $googleStorePath  = "documents/{$companyId}/{$hashName}";
+        $googlePath       = null;
+        try {
+            Storage::disk('google')->throw()->put($googleStorePath, fopen($file->getRealPath(), 'rb'));
+            $googlePath = $googleStorePath;
+            \Log::info('[Drive] upload ok', ['path' => $googlePath]);
+        } catch (\Throwable $e) {
+            \Log::error('[Drive] upload failed', ['msg' => $e->getMessage()]);
+        }
 
-        $driveFileId = $this->resolveFileIdBySearch($googlePath);
+        $localPath   = $file->store("temp/documents", 'local');
+        $driveFileId = $googlePath ? $this->resolveFileIdBySearch($googlePath) : null;
 
         $document = Document::create([
             'company_id'     => $companyId,
