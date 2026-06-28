@@ -179,10 +179,11 @@ class DocumentController extends Controller
     private function resolveFileIdBySearch(string $originalFilename): ?string
     {
         try {
-            $service  = app(GoogleDrive::class);
-            $safe     = str_replace("'", "\\'", $originalFilename);
-            $fileList = $service->files->listFiles([
-                'q'                         => "name = '{$safe}' and trashed = false",
+            $service      = app(GoogleDrive::class);
+            $rootFolderId = config('filesystems.disks.google.folder_id');
+            $safe         = str_replace("'", "\\'", $originalFilename);
+            $fileList     = $service->files->listFiles([
+                'q'                         => "name = '{$safe}' and '{$rootFolderId}' in ancestors and trashed = false",
                 'fields'                    => 'files(id, name)',
                 'pageSize'                  => 5,
                 'orderBy'                   => 'createdTime desc',
@@ -190,9 +191,10 @@ class DocumentController extends Controller
                 'supportsAllDrives'         => true,
             ])->getFiles();
             \Log::info('[Drive] resolveFileIdBySearch', [
-                'filename' => $originalFilename,
-                'count'    => count($fileList ?? []),
-                'id'       => !empty($fileList) ? $fileList[0]->getId() : null,
+                'filename'     => $originalFilename,
+                'rootFolderId' => $rootFolderId,
+                'count'        => count($fileList ?? []),
+                'id'           => !empty($fileList) ? $fileList[0]->getId() : null,
             ]);
             return !empty($fileList) ? $fileList[0]->getId() : null;
         } catch (\Throwable $e) {
