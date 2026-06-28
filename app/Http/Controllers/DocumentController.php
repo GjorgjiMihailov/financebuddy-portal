@@ -83,7 +83,7 @@ class DocumentController extends Controller
         $googlePath = $file->store("documents/{$companyId}", 'google');
         $localPath  = $file->store("temp/documents", 'local');
 
-        $driveFileId = $this->resolveDriveFileId($file->getClientOriginalName());
+        $driveFileId = $this->resolveFileIdBySearch($googlePath);
 
         $document = Document::create([
             'company_id'     => $companyId,
