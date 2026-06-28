@@ -80,31 +80,21 @@ class DocumentController extends Controller
 
         $file = $request->file('file');
 
-        $hashName         = $file->hashName();
-        $googleStorePath  = "documents/{$companyId}/{$hashName}";
-        $googlePath       = null;
-        try {
-            Storage::disk('google')->throw()->put($googleStorePath, fopen($file->getRealPath(), 'rb'));
-            $googlePath = $googleStorePath;
-            \Log::info('[Drive] upload ok', ['path' => $googlePath]);
-        } catch (\Throwable $e) {
-            \Log::error('[Drive] upload failed', ['msg' => $e->getMessage()]);
-        }
-
+        $googlePath  = $file->store("documents/{$companyId}", 'google') ?: '';
         $localPath   = $file->store("temp/documents", 'local');
         $driveFileId = $googlePath ? $this->resolveFileIdBySearch($googlePath) : null;
 
         $document = Document::create([
-            'company_id'     => $companyId,
-            'uploaded_by'    => $request->user()->id,
-            'type'           => $request->type,
-            'status'         => DocumentStatus::Pending,
-            'intake_channel' => IntakeChannel::Portal,
+            'company_id'        => $companyId,
+            'uploaded_by'       => $request->user()->id,
+            'type'              => $request->type,
+            'status'            => DocumentStatus::Pending,
+            'intake_channel'    => IntakeChannel::Portal,
             'original_filename' => $file->getClientOriginalName(),
-            'storage_path'   => $googlePath,
-            'drive_file_id'  => $driveFileId,
-            'mime_type'      => $file->getMimeType(),
-            'file_size'      => $file->getSize(),
+            'storage_path'      => $googlePath,
+            'drive_file_id'     => $driveFileId,
+            'mime_type'         => $file->getMimeType(),
+            'file_size'         => $file->getSize(),
         ]);
 
         ProcessDocumentJob::dispatch($document, $localPath);
@@ -174,14 +164,9 @@ class DocumentController extends Controller
         try {
             $adapter = Storage::disk('google')->getAdapter();
             if (method_exists($adapter, 'getFileId')) {
-                $id = $adapter->getFileId($path);
-                \Log::info('[Drive] resolveFileIdByPath', ['path' => $path, 'id' => $id]);
-                return $id;
+                return $adapter->getFileId($path);
             }
-            \Log::info('[Drive] adapter has no getFileId', ['class' => get_class($adapter)]);
-        } catch (\Throwable $e) {
-            \Log::error('[Drive] resolveFileIdByPath error', ['msg' => $e->getMessage()]);
-        }
+        } catch (\Throwable) {}
         return null;
     }
 
@@ -193,21 +178,14 @@ class DocumentController extends Controller
             $safe     = str_replace("'", "\\'", $filename);
             $fileList = $service->files->listFiles([
                 'q'                         => "name = '{$safe}' and trashed = false",
-                'fields'                    => 'files(id, name)',
+                'fields'                    => 'files(id)',
                 'pageSize'                  => 1,
                 'orderBy'                   => 'createdTime desc',
                 'includeItemsFromAllDrives' => true,
                 'supportsAllDrives'         => true,
             ])->getFiles();
-            \Log::info('[Drive] resolveFileIdBySearch', [
-                'storedPath' => $storedPath,
-                'filename'   => $filename,
-                'count'      => count($fileList ?? []),
-                'id'         => !empty($fileList) ? $fileList[0]->getId() : null,
-            ]);
             return !empty($fileList) ? $fileList[0]->getId() : null;
-        } catch (\Throwable $e) {
-            \Log::error('[Drive] resolveFileIdBySearch error', ['msg' => $e->getMessage()]);
+        } catch (\Throwable) {
             return null;
         }
     }
