@@ -118,7 +118,7 @@ const isImage = props.document.mime_type.startsWith('image/');
         </Card>
 
         <!-- Preview toggle -->
-        <div v-if="isPdf || isImage" class="rounded-lg border overflow-hidden">
+        <div class="rounded-lg border overflow-hidden">
             <button
                 type="button"
                 class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/50 transition-colors"
@@ -132,20 +132,20 @@ const isImage = props.document.mime_type.startsWith('image/');
                 <ChevronDown v-else class="size-4 text-muted-foreground" />
             </button>
             <div v-if="showPreview" class="border-t">
-                <iframe
-                    v-if="isPdf"
-                    :src="`/documents/${document.id}/file`"
-                    class="w-full"
-                    style="height: 700px;"
-                    frameborder="0"
-                />
-                <div v-else-if="isImage" class="flex justify-center bg-muted/30 p-4">
+                <div v-if="isImage" class="flex justify-center bg-muted/30 p-4">
                     <img
                         :src="`/documents/${document.id}/file`"
                         :alt="document.original_filename"
                         class="max-w-full rounded shadow-sm"
                     />
                 </div>
+                <iframe
+                    v-else
+                    :src="`/documents/${document.id}/file`"
+                    class="w-full"
+                    style="height: 700px;"
+                    frameborder="0"
+                />
             </div>
         </div>
 
