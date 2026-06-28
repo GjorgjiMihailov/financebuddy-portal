@@ -128,13 +128,21 @@ class DocumentController extends Controller
     {
         $this->authorize('view', $document);
 
-        abort_unless($document->drive_file_id, 404, 'Фајлот не е достапен за преглед.');
+        $fileId = $document->drive_file_id
+            ?? $this->resolveFileIdByPath($document->storage_path)
+            ?? $this->resolveFileIdBySearch($document->original_filename);
 
-        $service    = app(GoogleDrive::class);
-        $httpClient = $service->getClient()->authorize();
-        $driveUrl   = "https://www.googleapis.com/drive/v3/files/{$document->drive_file_id}?alt=media";
+        if ($fileId && !$document->drive_file_id) {
+            $document->updateQuietly(['drive_file_id' => $fileId]);
+        }
+
+        abort_unless($fileId, 404, 'Фајлот не е достапен за преглед.');
+
+        $service      = app(GoogleDrive::class);
+        $httpClient   = $service->getClient()->authorize();
+        $driveUrl     = "https://www.googleapis.com/drive/v3/files/{$fileId}?alt=media";
         $httpResponse = $httpClient->request('GET', $driveUrl, ['stream' => true]);
-        $body = $httpResponse->getBody();
+        $body         = $httpResponse->getBody();
 
         return response()->stream(
             function () use ($body) {
@@ -152,7 +160,18 @@ class DocumentController extends Controller
         );
     }
 
-    private function resolveDriveFileId(string $originalFilename): ?string
+    private function resolveFileIdByPath(string $path): ?string
+    {
+        try {
+            $adapter = Storage::disk('google')->getAdapter();
+            if (method_exists($adapter, 'getFileId')) {
+                return $adapter->getFileId($path);
+            }
+        } catch (\Throwable) {}
+        return null;
+    }
+
+    private function resolveFileIdBySearch(string $originalFilename): ?string
     {
         try {
             $service = app(GoogleDrive::class);
