@@ -179,19 +179,24 @@ class DocumentController extends Controller
     private function resolveFileIdBySearch(string $originalFilename): ?string
     {
         try {
-            $service = app(GoogleDrive::class);
-            $safe    = str_replace("'", "\\'", $originalFilename);
-            $files   = $service->files->listFiles([
-                'q'        => "name = '{$safe}' and trashed = false",
-                'fields'   => 'files(id)',
-                'pageSize' => 1,
-                'orderBy'  => 'createdTime desc',
+            $service  = app(GoogleDrive::class);
+            $safe     = str_replace("'", "\\'", $originalFilename);
+            $fileList = $service->files->listFiles([
+                'q'                         => "name = '{$safe}' and trashed = false",
+                'fields'                    => 'files(id, name)',
+                'pageSize'                  => 5,
+                'orderBy'                   => 'createdTime desc',
+                'includeItemsFromAllDrives' => true,
+                'supportsAllDrives'         => true,
+            ])->getFiles();
+            \Log::info('[Drive] resolveFileIdBySearch', [
+                'filename' => $originalFilename,
+                'count'    => count($fileList ?? []),
+                'id'       => !empty($fileList) ? $fileList[0]->getId() : null,
             ]);
-            $results = $files->getFiles();
-            \Log::info('[Drive] resolveFileIdBySearch', ['filename' => $originalFilename, 'count' => count($results), 'id' => $results[0]?->getId()]);
-            return $results[0]?->getId();
+            return !empty($fileList) ? $fileList[0]->getId() : null;
         } catch (\Throwable $e) {
-            \Log::error('[Drive] resolveFileIdBySearch error', ['msg' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            \Log::error('[Drive] resolveFileIdBySearch error', ['msg' => $e->getMessage()]);
             return null;
         }
     }
