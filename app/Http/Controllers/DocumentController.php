@@ -165,9 +165,14 @@ class DocumentController extends Controller
         try {
             $adapter = Storage::disk('google')->getAdapter();
             if (method_exists($adapter, 'getFileId')) {
-                return $adapter->getFileId($path);
+                $id = $adapter->getFileId($path);
+                \Log::info('[Drive] resolveFileIdByPath', ['path' => $path, 'id' => $id]);
+                return $id;
             }
-        } catch (\Throwable) {}
+            \Log::info('[Drive] adapter has no getFileId', ['class' => get_class($adapter)]);
+        } catch (\Throwable $e) {
+            \Log::error('[Drive] resolveFileIdByPath error', ['msg' => $e->getMessage()]);
+        }
         return null;
     }
 
@@ -182,8 +187,11 @@ class DocumentController extends Controller
                 'pageSize' => 1,
                 'orderBy'  => 'createdTime desc',
             ]);
-            return $files->getFiles()[0]?->getId();
-        } catch (\Throwable) {
+            $results = $files->getFiles();
+            \Log::info('[Drive] resolveFileIdBySearch', ['filename' => $originalFilename, 'count' => count($results), 'id' => $results[0]?->getId()]);
+            return $results[0]?->getId();
+        } catch (\Throwable $e) {
+            \Log::error('[Drive] resolveFileIdBySearch error', ['msg' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return null;
         }
     }
