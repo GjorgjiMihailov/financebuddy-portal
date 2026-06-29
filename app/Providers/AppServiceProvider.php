@@ -20,8 +20,11 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(GoogleDrive::class, function () {
             $client = new GoogleClient();
-            $client->setAuthConfig(storage_path('app/google-service-account.json'));
+            $client->setClientId(config('services.google.client_id'));
+            $client->setClientSecret(config('services.google.client_secret'));
+            $client->setAccessType('offline');
             $client->addScope(GoogleDrive::DRIVE);
+            $client->fetchAccessTokenWithRefreshToken(config('services.google.refresh_token'));
             return new GoogleDrive($client);
         });
     }
