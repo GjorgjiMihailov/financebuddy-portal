@@ -17,6 +17,11 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // ── Chart of Accounts ─────────────────────────────────────────────────────
+    Route::get('settings/accounts', [\App\Http\Controllers\ChartOfAccountController::class, 'index'])->name('settings.accounts.index');
+    Route::post('settings/accounts', [\App\Http\Controllers\ChartOfAccountController::class, 'store'])->name('settings.accounts.store');
+    Route::put('settings/accounts/{account}', [\App\Http\Controllers\ChartOfAccountController::class, 'update'])->name('settings.accounts.update');
+
     Route::get('settings/security', [SecurityController::class, 'edit'])
         /* @chisel-password-confirmation */
         ->middleware(RequirePassword::class)

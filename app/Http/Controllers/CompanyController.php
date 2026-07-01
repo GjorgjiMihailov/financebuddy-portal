@@ -44,9 +44,11 @@ class CompanyController extends Controller
         return to_route('companies.show', $company);
     }
 
-    public function show(Company $company): Response
+    public function show(Company $company, \Illuminate\Http\Request $request): Response
     {
         $this->authorize('view', $company);
+
+        $tab = $request->get('tab', 'documents');
 
         $docs = $company->documents();
 
@@ -57,15 +59,20 @@ class CompanyController extends Controller
             'verified'   => (clone $docs)->where('status', DocumentStatus::Verified)->count(),
         ];
 
-        $documents = $company->documents()
-            ->with('uploader:id,name')
-            ->latest()
-            ->paginate(15);
+        $documents = $tab === 'documents'
+            ? $company->documents()->with('uploader:id,name')->latest()->paginate(15)->withQueryString()
+            : null;
+
+        $journalEntries = $tab === 'journal-entries'
+            ? $company->journalEntries()->with('creator:id,name')->latest()->paginate(15)->withQueryString()
+            : null;
 
         return Inertia::render('companies/Show', [
-            'company'   => $company->load('creator'),
-            'stats'     => $stats,
-            'documents' => $documents,
+            'company'        => $company->load('creator'),
+            'stats'          => $stats,
+            'tab'            => $tab,
+            'documents'      => $documents,
+            'journalEntries' => $journalEntries,
         ]);
     }
 

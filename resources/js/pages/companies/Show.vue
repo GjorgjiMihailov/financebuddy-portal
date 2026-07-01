@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Building2, CheckCircle2, Clock, FileText, AlertCircle, Pencil, Plus } from '@lucide/vue';
+import {
+    Building2,
+    CheckCircle2,
+    Clock,
+    FileText,
+    AlertCircle,
+    Pencil,
+    Plus,
+    BookOpen,
+    BarChart2,
+    CalendarRange,
+} from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,10 +33,29 @@ type PaginatedDocs = {
     links: { url: string | null; label: string; active: boolean }[];
 };
 
-defineProps<{
+type JournalEntryRow = {
+    id: number;
+    entry_date: string;
+    description: string | null;
+    reference: string | null;
+    status: string;
+    creator: { name: string } | null;
+};
+
+type PaginatedEntries = {
+    data: JournalEntryRow[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    links: { url: string | null; label: string; active: boolean }[];
+};
+
+const props = defineProps<{
     company: Company;
     stats: Stats;
-    documents: PaginatedDocs;
+    tab: string;
+    documents: PaginatedDocs | null;
+    journalEntries: PaginatedEntries | null;
 }>();
 
 defineOptions({
@@ -37,6 +67,10 @@ defineOptions({
     },
 });
 
+function setTab(t: string) {
+    router.get(`/companies/${props.company.id}`, { tab: t }, { preserveState: false, replace: true });
+}
+
 function formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString('mk-MK', {
         day: '2-digit',
@@ -44,6 +78,16 @@ function formatDate(iso: string): string {
         year: 'numeric',
     });
 }
+
+const JE_STATUS_LABEL: Record<string, string> = {
+    draft: 'Нацрт',
+    posted: 'Прокнижено',
+};
+
+const JE_STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
+    draft: 'outline',
+    posted: 'default',
+};
 </script>
 
 <template>
@@ -162,82 +206,170 @@ function formatDate(iso: string): string {
             </div>
         </div>
 
-        <!-- Documents table -->
+        <!-- Tabs -->
         <div>
-            <div class="mb-3 flex items-center justify-between">
-                <h2 class="font-semibold">Документи</h2>
-                <div class="flex gap-2">
-                    <Button variant="outline" size="sm" as-child>
-                        <Link :href="`/documents?company_id=${company.id}`">
-                            Сите документи
-                        </Link>
-                    </Button>
-                    <Button size="sm" as-child>
-                        <Link :href="`/documents/create?company_id=${company.id}`">
-                            <Plus class="mr-2 size-3.5" />
-                            Прикачи
-                        </Link>
-                    </Button>
+            <div class="mb-4 flex gap-1 rounded-lg border bg-muted/30 p-1 w-fit">
+                <button
+                    v-for="t in [
+                        { key: 'documents', label: 'Документи', icon: FileText },
+                        { key: 'journal-entries', label: 'Книжења', icon: BookOpen },
+                        { key: 'reports', label: 'Извештаи', icon: BarChart2 },
+                    ]"
+                    :key="t.key"
+                    class="flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors"
+                    :class="tab === t.key
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'"
+                    @click="setTab(t.key)"
+                >
+                    <component :is="t.icon" class="size-4" />
+                    {{ t.label }}
+                </button>
+            </div>
+
+            <!-- ── Tab: Документи ─────────────────────────────────────────────── -->
+            <template v-if="tab === 'documents'">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="font-semibold">Документи</h2>
+                    <div class="flex gap-2">
+                        <Button variant="outline" size="sm" as-child>
+                            <Link :href="`/documents?company_id=${company.id}`">Сите документи</Link>
+                        </Button>
+                        <Button size="sm" as-child>
+                            <Link :href="`/documents/create?company_id=${company.id}`">
+                                <Plus class="mr-2 size-3.5" />
+                                Прикачи
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="rounded-lg border">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b bg-muted/50">
-                            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Документ</th>
-                            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Тип</th>
-                            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
-                            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Качил</th>
-                            <th class="px-4 py-3 text-left font-medium text-muted-foreground">Датум</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-if="documents.data.length === 0">
-                            <td colspan="5" class="py-12 text-center text-muted-foreground">
-                                <FileText class="mx-auto mb-3 size-8 opacity-30" />
-                                <p>Нема документи за оваа компанија</p>
-                            </td>
-                        </tr>
-                        <tr
-                            v-for="doc in documents.data"
-                            :key="doc.id"
-                            class="cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/30"
-                            @click="router.visit(`/documents/${doc.id}`)"
-                        >
-                            <td class="max-w-52 truncate px-4 py-3 font-medium">
-                                {{ doc.original_filename }}
-                            </td>
-                            <td class="px-4 py-3 text-muted-foreground">
-                                {{ DOCUMENT_TYPE_LABELS[doc.type as DocumentType] }}
-                            </td>
-                            <td class="px-4 py-3">
-                                <Badge :variant="DOCUMENT_STATUS_VARIANT[doc.status as DocumentStatus]">
-                                    {{ DOCUMENT_STATUS_LABELS[doc.status as DocumentStatus] }}
-                                </Badge>
-                            </td>
-                            <td class="px-4 py-3 text-muted-foreground">
-                                {{ doc.uploader?.name ?? '—' }}
-                            </td>
-                            <td class="px-4 py-3 text-muted-foreground">
-                                {{ formatDate(doc.created_at) }}
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                <div class="rounded-lg border">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b bg-muted/50">
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Документ</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Тип</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Качил</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Датум</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="!documents || documents.data.length === 0">
+                                <td colspan="5" class="py-12 text-center text-muted-foreground">
+                                    <FileText class="mx-auto mb-3 size-8 opacity-30" />
+                                    <p>Нема документи за оваа компанија</p>
+                                </td>
+                            </tr>
+                            <tr
+                                v-for="doc in documents?.data ?? []"
+                                :key="doc.id"
+                                class="cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/30"
+                                @click="router.visit(`/documents/${doc.id}`)"
+                            >
+                                <td class="max-w-52 truncate px-4 py-3 font-medium">{{ doc.original_filename }}</td>
+                                <td class="px-4 py-3 text-muted-foreground">
+                                    {{ DOCUMENT_TYPE_LABELS[doc.type as DocumentType] }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    <Badge :variant="DOCUMENT_STATUS_VARIANT[doc.status as DocumentStatus]">
+                                        {{ DOCUMENT_STATUS_LABELS[doc.status as DocumentStatus] }}
+                                    </Badge>
+                                </td>
+                                <td class="px-4 py-3 text-muted-foreground">{{ doc.uploader?.name ?? '—' }}</td>
+                                <td class="px-4 py-3 text-muted-foreground">{{ formatDate(doc.created_at) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            <div v-if="documents.last_page > 1" class="mt-4 flex justify-center gap-1">
-                <Button
-                    v-for="link in documents.links"
-                    :key="link.label"
-                    :variant="link.active ? 'default' : 'outline'"
-                    size="sm"
-                    :disabled="!link.url"
-                    v-html="link.label"
-                    @click="link.url && router.visit(link.url, { preserveScroll: true })"
-                />
-            </div>
+                <div v-if="documents && documents.last_page > 1" class="mt-4 flex justify-center gap-1">
+                    <Button
+                        v-for="link in documents.links"
+                        :key="link.label"
+                        :variant="link.active ? 'default' : 'outline'"
+                        size="sm"
+                        :disabled="!link.url"
+                        v-html="link.label"
+                        @click="link.url && router.visit(link.url, { preserveScroll: true })"
+                    />
+                </div>
+            </template>
+
+            <!-- ── Tab: Книжења ──────────────────────────────────────────────── -->
+            <template v-else-if="tab === 'journal-entries'">
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="font-semibold">Книжења</h2>
+                </div>
+
+                <div class="rounded-lg border">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b bg-muted/50">
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">#</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Датум</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Опис</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Референца</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
+                                <th class="px-4 py-3 text-left font-medium text-muted-foreground">Внел</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-if="!journalEntries || journalEntries.data.length === 0">
+                                <td colspan="6" class="py-12 text-center text-muted-foreground">
+                                    <BookOpen class="mx-auto mb-3 size-8 opacity-30" />
+                                    <p>Нема книжења за оваа компанија</p>
+                                </td>
+                            </tr>
+                            <tr
+                                v-for="entry in journalEntries?.data ?? []"
+                                :key="entry.id"
+                                class="cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/30"
+                                @click="router.visit(`/journal-entries/${entry.id}`)"
+                            >
+                                <td class="px-4 py-3 font-mono text-muted-foreground">{{ entry.id }}</td>
+                                <td class="px-4 py-3">{{ formatDate(entry.entry_date) }}</td>
+                                <td class="max-w-60 truncate px-4 py-3">{{ entry.description ?? '—' }}</td>
+                                <td class="px-4 py-3 font-mono text-muted-foreground">{{ entry.reference ?? '—' }}</td>
+                                <td class="px-4 py-3">
+                                    <Badge :variant="JE_STATUS_VARIANT[entry.status] ?? 'outline'">
+                                        {{ JE_STATUS_LABEL[entry.status] ?? entry.status }}
+                                    </Badge>
+                                </td>
+                                <td class="px-4 py-3 text-muted-foreground">{{ entry.creator?.name ?? '—' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-if="journalEntries && journalEntries.last_page > 1" class="mt-4 flex justify-center gap-1">
+                    <Button
+                        v-for="link in journalEntries.links"
+                        :key="link.label"
+                        :variant="link.active ? 'default' : 'outline'"
+                        size="sm"
+                        :disabled="!link.url"
+                        v-html="link.label"
+                        @click="link.url && router.visit(link.url, { preserveScroll: true })"
+                    />
+                </div>
+            </template>
+
+            <!-- ── Tab: Извештаи ─────────────────────────────────────────────── -->
+            <template v-else-if="tab === 'reports'">
+                <div class="rounded-lg border border-dashed p-12 text-center">
+                    <CalendarRange class="mx-auto mb-4 size-10 text-muted-foreground/40" />
+                    <h3 class="mb-1 font-semibold text-muted-foreground">Извештаи — наскоро</h3>
+                    <p class="text-sm text-muted-foreground">
+                        Бруто биланс, аналитичка картичка по конто, синтетичка картичка, картичка по клиент
+                    </p>
+                    <p class="mt-3 text-xs text-muted-foreground">
+                        Ќе бидат достапни со избор на период (датум од / до)
+                    </p>
+                </div>
+            </template>
+
         </div>
 
     </div>
