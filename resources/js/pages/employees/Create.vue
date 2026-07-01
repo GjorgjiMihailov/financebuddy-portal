@@ -3,7 +3,7 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -95,7 +95,7 @@ function submit() { form.post('/employees'); }
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <Switch v-model:checked="form.is_active" />
+                        <Checkbox v-model:checked="form.is_active" />
                         <Label>Активен вработен</Label>
                     </div>
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -342,11 +342,11 @@ const hasFilters = computed(() => search.value || classFilter.value !== '');
 
                 <div class="flex items-center gap-6">
                     <div class="flex items-center gap-2">
-                        <Switch id="c-posting" v-model:checked="createForm.allows_posting" />
+                        <Checkbox id="c-posting" v-model:checked="createForm.allows_posting" />
                         <Label for="c-posting">Дозволува книжење</Label>
                     </div>
                     <div class="flex items-center gap-2">
-                        <Switch id="c-active" v-model:checked="createForm.is_active" />
+                        <Checkbox id="c-active" v-model:checked="createForm.is_active" />
                         <Label for="c-active">Активно</Label>
                     </div>
                 </div>
@@ -382,11 +382,11 @@ const hasFilters = computed(() => search.value || classFilter.value !== '');
 
                 <div class="flex items-center gap-6">
                     <div class="flex items-center gap-2">
-                        <Switch id="e-posting" v-model:checked="editForm.allows_posting" />
+                        <Checkbox id="e-posting" v-model:checked="editForm.allows_posting" />
                         <Label for="e-posting">Дозволува книжење</Label>
                     </div>
                     <div class="flex items-center gap-2">
-                        <Switch id="e-active" v-model:checked="editForm.is_active" />
+                        <Checkbox id="e-active" v-model:checked="editForm.is_active" />
                         <Label for="e-active">Активно</Label>
                     </div>
                 </div>

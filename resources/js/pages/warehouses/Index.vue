@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 
 defineOptions({
     layout: {
@@ -138,7 +138,7 @@ function deleteWarehouse(w: Warehouse) {
                     <Input v-model="editForm.location" />
                 </div>
                 <div class="flex items-center gap-2">
-                    <Switch v-model:checked="editForm.is_active" />
+                    <Checkbox v-model:checked="editForm.is_active" />
                     <Label>Активен</Label>
                 </div>
             </div>
