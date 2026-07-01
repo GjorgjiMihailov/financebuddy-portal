@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { Plus, Pencil, Trash2 } from '@lucide/vue';
+import { Plus, Pencil, Trash2, Package } from '@lucide/vue';
 import { ref } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -111,6 +111,12 @@ function deleteWarehouse(w: Warehouse) {
                         </td>
                         <td class="px-4 py-3 text-right">
                             <div class="flex justify-end gap-1">
+                                <Button variant="outline" size="sm" as-child>
+                                    <Link :href="`/warehouses/${w.id}/inventory`">
+                                        <Package class="mr-1.5 size-3.5" />
+                                        Залихи
+                                    </Link>
+                                </Button>
                                 <Button variant="ghost" size="icon" @click="openEdit(w)"><Pencil class="size-4" /></Button>
                                 <Button variant="ghost" size="icon" @click="deleteWarehouse(w)"><Trash2 class="size-4 text-destructive" /></Button>
                             </div>

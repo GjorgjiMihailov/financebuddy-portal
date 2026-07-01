@@ -1,46 +1,161 @@
-<script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { Plus } from '@lucide/vue';
-import { ref } from 'vue';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+﻿<script setup lang="ts">
+import { Head, router, useForm } from "@inertiajs/vue3";
+import { Plus, Eye, Trash2, FileText, X } from "@lucide/vue";
+import { ref, computed, watch } from "vue";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Link } from "@inertiajs/vue3";
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Влезни фактури', href: '/purchase-invoices' }],
+        breadcrumbs: [
+            { title: "Материјално", href: "/purchase-invoices" },
+            { title: "Влезни фактури", href: "/purchase-invoices" },
+        ],
     },
 });
 
+type Kontragent = { id: number; name: string; edb: string };
+type Item = { id: number; code: string; name: string; unit: string; price_without_vat: string; vat_category: string };
 type Company = { id: number; name: string };
-type Invoice = {
-    id: number; supplier_name: string; invoice_number: string;
-    date: string; total_amount: string; status: string;
-    company: Company; creator: { name: string } | null;
+type InvoiceLine = {
+    item_id: string;
+    description: string;
+    quantity: string;
+    unit: string;
+    unit_price: string;
+    vat_rate: string;
+    line_total_ex_vat: number;
+    vat_amount: number;
+    line_total_inc_vat: number;
 };
-type Paginated = { data: Invoice[]; total: number; last_page: number; links: { url: string | null; label: string; active: boolean }[] };
+type Invoice = {
+    id: number;
+    invoice_number: string;
+    date: string;
+    due_date: string | null;
+    status: string;
+    total_amount: string;
+    company: Company;
+    kontragent: Kontragent | null;
+    supplier_name: string | null;
+};
+type Paginated = {
+    data: Invoice[];
+    total: number;
+    last_page: number;
+    links: { url: string | null; label: string; active: boolean }[];
+};
 
-const props = defineProps<{ invoices: Paginated; companies: Company[]; filters: { company_id?: string; status?: string } }>();
+const props = defineProps<{
+    invoices:  Paginated;
+    companies: Company[];
+    filters:   { company_id?: string; status?: string };
+}>();
 
-const companyFilter = ref(props.filters.company_id ?? '');
-const statusFilter = ref(props.filters.status ?? '');
+const STATUS_LABELS: Record<string, string> = { draft: "Нацрт", booked: "Книжена" };
+const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = { draft: "outline", booked: "secondary" };
 
-function applyFilter() {
-    const params: Record<string, string> = {};
-    if (companyFilter.value) params.company_id = companyFilter.value;
-    if (statusFilter.value) params.status = statusFilter.value;
-    router.get('/purchase-invoices', params, { replace: true });
+const companyFilter = ref(props.filters.company_id ?? "");
+const statusFilter  = ref(props.filters.status ?? "");
+
+function applyFilters() {
+    router.get("/purchase-invoices", {
+        ...(companyFilter.value ? { company_id: companyFilter.value } : {}),
+        ...(statusFilter.value ? { status: statusFilter.value } : {}),
+    }, { preserveState: true, replace: true });
 }
 
-const STATUS_LABELS: Record<string, string> = { draft: 'Нацрт', booked: 'Прокнижена' };
-const STATUS_VARIANT: Record<string, 'outline' | 'default'> = { draft: 'outline', booked: 'default' };
+// Create dialog
+const showCreate        = ref(false);
+const kontragenti       = ref<Kontragent[]>([]);
+const items             = ref<Item[]>([]);
+const loadingK          = ref(false);
 
-function formatAmount(val: string): string {
-    return Number(val).toLocaleString('mk-MK', { minimumFractionDigits: 2 });
+const createForm = useForm({
+    company_id:     "",
+    kontragent_id:  "",
+    supplier_name:  "",
+    invoice_number: "",
+    date:           new Date().toISOString().split("T")[0],
+    due_date:       "",
+    notes:          "",
+    status:         "draft",
+    lines:          [] as InvoiceLine[],
+});
+
+watch(() => createForm.company_id, async (id) => {
+    if (!id) { kontragenti.value = []; items.value = []; return; }
+    loadingK.value = true;
+    try {
+        const [kr, ir] = await Promise.all([
+            fetch(`/companies/${id}/kontragenti?type=supplier`).then(r => r.json()),
+            fetch(`/companies/${id}/items`).then(r => r.json()),
+        ]);
+        kontragenti.value = kr;
+        items.value       = ir;
+    } finally { loadingK.value = false; }
+});
+
+function addLine() {
+    createForm.lines.push({ item_id: "", description: "", quantity: "1", unit: "бр", unit_price: "0", vat_rate: "18", line_total_ex_vat: 0, vat_amount: 0, line_total_inc_vat: 0 });
 }
 
-function formatDate(d: string): string {
-    return new Date(d).toLocaleDateString('mk-MK', { day: '2-digit', month: 'short', year: 'numeric' });
+function removeLine(idx: number) { createForm.lines.splice(idx, 1); }
+
+function onItemSelect(idx: number, itemId: string) {
+    const item = items.value.find(i => String(i.id) === itemId);
+    if (!item) return;
+    const line = createForm.lines[idx];
+    line.description = item.name;
+    line.unit        = item.unit;
+    line.unit_price  = item.price_without_vat;
+    line.vat_rate    = item.vat_category;
+    recalcLine(idx);
+}
+
+function recalcLine(idx: number) {
+    const line = createForm.lines[idx];
+    const qty   = parseFloat(line.quantity)   || 0;
+    const price = parseFloat(line.unit_price) || 0;
+    const vat   = parseFloat(line.vat_rate)   || 0;
+    const exVat = Math.round(qty * price * 100) / 100;
+    const vatAmt = Math.round(exVat * vat / 100 * 100) / 100;
+    line.line_total_ex_vat  = exVat;
+    line.vat_amount         = vatAmt;
+    line.line_total_inc_vat = Math.round((exVat + vatAmt) * 100) / 100;
+}
+
+const totals = computed(() => {
+    let sub = 0, vat = 0;
+    for (const l of createForm.lines) { sub += l.line_total_ex_vat; vat += l.vat_amount; }
+    return { sub: Math.round(sub * 100) / 100, vat: Math.round(vat * 100) / 100, total: Math.round((sub + vat) * 100) / 100 };
+});
+
+function openCreate() {
+    createForm.reset();
+    createForm.date = new Date().toISOString().split("T")[0];
+    createForm.status = "draft";
+    kontragenti.value = [];
+    items.value = [];
+    showCreate.value = true;
+}
+
+function submitCreate() {
+    createForm.post("/purchase-invoices", { onSuccess: () => { showCreate.value = false; } });
+}
+
+function fmt(v: string | number) {
+    return Number(v).toLocaleString("mk-MK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function deleteInvoice(inv: Invoice) {
+    if (!confirm(`Избриши фактура ${inv.invoice_number}?`)) return;
+    router.delete(`/purchase-invoices/${inv.id}`, { preserveScroll: true });
 }
 </script>
 
@@ -48,61 +163,79 @@ function formatDate(d: string): string {
     <Head title="Влезни фактури" />
 
     <div class="flex flex-col gap-6 p-6">
+
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-semibold">Влезни фактури</h1>
-                <p class="text-sm text-muted-foreground">{{ invoices.total }} вкупно</p>
+                <p class="mt-0.5 text-sm text-muted-foreground">{{ invoices.total }} вкупно</p>
             </div>
-            <Button as-child>
-                <Link href="/purchase-invoices/create">
-                    <Plus class="mr-2 size-4" />
-                    Нова фактура
-                </Link>
+            <Button @click="openCreate">
+                <Plus class="mr-2 size-4" />
+                Нова фактура
             </Button>
         </div>
 
-        <div class="flex flex-wrap gap-3">
-            <Select v-model="companyFilter" @update:model-value="applyFilter">
+        <!-- Filters -->
+        <div class="flex flex-wrap items-end gap-3">
+            <Select v-model="companyFilter" @update:model-value="applyFilters">
                 <SelectTrigger class="w-56"><SelectValue placeholder="Сите компании" /></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="">Сите компании</SelectItem>
                     <SelectItem v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</SelectItem>
                 </SelectContent>
             </Select>
-            <Select v-model="statusFilter" @update:model-value="applyFilter">
+            <Select v-model="statusFilter" @update:model-value="applyFilters">
                 <SelectTrigger class="w-40"><SelectValue placeholder="Сите статуси" /></SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="">Сите</SelectItem>
+                    <SelectItem value="">Сите статуси</SelectItem>
                     <SelectItem value="draft">Нацрт</SelectItem>
-                    <SelectItem value="booked">Прокнижена</SelectItem>
+                    <SelectItem value="booked">Книжена</SelectItem>
                 </SelectContent>
             </Select>
+            <Button v-if="companyFilter || statusFilter" variant="ghost" size="icon" @click="companyFilter=''; statusFilter=''; applyFilters()">
+                <X class="size-4" />
+            </Button>
         </div>
 
+        <!-- Table -->
         <div class="rounded-lg border">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Добавувач</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Број фактура</th>
+                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Број</th>
                         <th class="px-4 py-3 text-left font-medium text-muted-foreground">Датум</th>
-                        <th class="px-4 py-3 text-right font-medium text-muted-foreground">Износ</th>
+                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Добавувач</th>
                         <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компанија</th>
+                        <th class="px-4 py-3 text-right font-medium text-muted-foreground">Вкупно</th>
                         <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-if="invoices.data.length === 0">
-                        <td colspan="6" class="py-12 text-center text-muted-foreground">Нема влезни фактури</td>
+                        <td colspan="7" class="py-16 text-center text-muted-foreground">
+                            <FileText class="mx-auto mb-3 size-10 opacity-30" />
+                            Нема влезни фактури
+                        </td>
                     </tr>
                     <tr v-for="inv in invoices.data" :key="inv.id" class="border-b last:border-0 hover:bg-muted/30">
-                        <td class="px-4 py-3 font-medium">{{ inv.supplier_name }}</td>
-                        <td class="px-4 py-3 font-mono text-muted-foreground">{{ inv.invoice_number }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ formatDate(inv.date) }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ formatAmount(inv.total_amount) }} ден.</td>
+                        <td class="px-4 py-3 font-mono font-medium">{{ inv.invoice_number }}</td>
+                        <td class="px-4 py-3 text-muted-foreground">{{ inv.date }}</td>
+                        <td class="px-4 py-3">{{ inv.kontragent?.name ?? inv.supplier_name ?? "—" }}</td>
                         <td class="px-4 py-3 text-muted-foreground">{{ inv.company.name }}</td>
+                        <td class="px-4 py-3 text-right font-mono font-semibold">{{ fmt(inv.total_amount) }}</td>
                         <td class="px-4 py-3">
-                            <Badge :variant="STATUS_VARIANT[inv.status] ?? 'outline'">{{ STATUS_LABELS[inv.status] ?? inv.status }}</Badge>
+                            <Badge :variant="STATUS_VARIANT[inv.status]" class="text-xs">{{ STATUS_LABELS[inv.status] }}</Badge>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex justify-end gap-1">
+                                <Button variant="ghost" size="icon" as-child>
+                                    <Link :href="`/purchase-invoices/${inv.id}`"><Eye class="size-4" /></Link>
+                                </Button>
+                                <Button v-if="inv.status === 'draft'" variant="ghost" size="icon" class="text-destructive hover:text-destructive" @click="deleteInvoice(inv)">
+                                    <Trash2 class="size-4" />
+                                </Button>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -110,7 +243,142 @@ function formatDate(d: string): string {
         </div>
 
         <div v-if="invoices.last_page > 1" class="flex justify-center gap-1">
-            <Button v-for="link in invoices.links" :key="link.label" :variant="link.active ? 'default' : 'outline'" size="sm" :disabled="!link.url" v-html="link.label" @click="link.url && router.visit(link.url)" />
+            <Button v-for="link in invoices.links" :key="link.label" :variant="link.active ? 'default' : 'outline'" size="sm" :disabled="!link.url" v-html="link.label" @click="link.url && router.visit(link.url, { preserveScroll: true })" />
         </div>
+
     </div>
+
+    <!-- Create Dialog -->
+    <Dialog v-model:open="showCreate">
+        <DialogContent class="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Нова влезна фактура</DialogTitle></DialogHeader>
+
+            <div class="grid gap-5 py-2">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="grid gap-1.5">
+                        <Label>Компанија *</Label>
+                        <Select v-model="createForm.company_id">
+                            <SelectTrigger><SelectValue placeholder="Избери компанија" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p v-if="createForm.errors.company_id" class="text-xs text-destructive">{{ createForm.errors.company_id }}</p>
+                    </div>
+                    <div class="grid gap-1.5">
+                        <Label>Добавувач</Label>
+                        <Select v-model="createForm.kontragent_id" :disabled="!createForm.company_id || loadingK">
+                            <SelectTrigger><SelectValue :placeholder="loadingK ? 'Вчитување…' : 'Избери добавувач'" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">— Без контрагент —</SelectItem>
+                                <SelectItem v-for="k in kontragenti" :key="k.id" :value="String(k.id)">{{ k.name }} ({{ k.edb }})</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="grid gap-1.5">
+                        <Label>Број на фактура *</Label>
+                        <Input v-model="createForm.invoice_number" placeholder="2024-0001" />
+                        <p v-if="createForm.errors.invoice_number" class="text-xs text-destructive">{{ createForm.errors.invoice_number }}</p>
+                    </div>
+                    <div class="grid gap-1.5">
+                        <Label>Датум *</Label>
+                        <Input v-model="createForm.date" type="date" />
+                    </div>
+                    <div class="grid gap-1.5">
+                        <Label>Датум на валута</Label>
+                        <Input v-model="createForm.due_date" type="date" />
+                    </div>
+                </div>
+
+                <!-- Ставки -->
+                <div>
+                    <div class="mb-2 flex items-center justify-between">
+                        <Label class="text-base font-semibold">Ставки</Label>
+                        <Button type="button" variant="outline" size="sm" @click="addLine" :disabled="!createForm.company_id">
+                            <Plus class="mr-1.5 size-3.5" />Додај ставка
+                        </Button>
+                    </div>
+
+                    <p v-if="createForm.lines.length === 0" class="py-6 text-center text-sm text-muted-foreground">
+                        Прво избери компанија, потоа додај ставки.
+                    </p>
+
+                    <div v-else class="rounded-lg border">
+                        <table class="w-full text-xs">
+                            <thead>
+                                <tr class="border-b bg-muted/50">
+                                    <th class="px-2 py-2 text-left font-medium text-muted-foreground">Артикл / Опис</th>
+                                    <th class="px-2 py-2 text-right font-medium text-muted-foreground w-20">Кол.</th>
+                                    <th class="px-2 py-2 text-left font-medium text-muted-foreground w-14">ЈМ</th>
+                                    <th class="px-2 py-2 text-right font-medium text-muted-foreground w-24">Цена</th>
+                                    <th class="px-2 py-2 text-right font-medium text-muted-foreground w-16">ДДВ%</th>
+                                    <th class="px-2 py-2 text-right font-medium text-muted-foreground w-24">Вк. без ДДВ</th>
+                                    <th class="px-2 py-2 text-right font-medium text-muted-foreground w-20">ДДВ</th>
+                                    <th class="px-2 py-2 text-right font-medium text-muted-foreground w-24">Вк. со ДДВ</th>
+                                    <th class="px-2 py-2 w-8"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(line, idx) in createForm.lines" :key="idx" class="border-b last:border-0">
+                                    <td class="px-2 py-1.5">
+                                        <div class="grid gap-1">
+                                            <Select v-model="line.item_id" @update:model-value="onItemSelect(idx, $event)">
+                                                <SelectTrigger class="h-7 text-xs"><SelectValue placeholder="Артикл" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="">— Без артикл —</SelectItem>
+                                                    <SelectItem v-for="item in items" :key="item.id" :value="String(item.id)">{{ item.code }} — {{ item.name }}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <Input v-model="line.description" class="h-7 text-xs" placeholder="Опис" />
+                                        </div>
+                                    </td>
+                                    <td class="px-2 py-1.5"><Input v-model="line.quantity" type="number" step="0.001" min="0.001" class="h-7 text-right text-xs" @input="recalcLine(idx)" /></td>
+                                    <td class="px-2 py-1.5"><Input v-model="line.unit" class="h-7 text-xs" /></td>
+                                    <td class="px-2 py-1.5"><Input v-model="line.unit_price" type="number" step="0.0001" min="0" class="h-7 text-right text-xs" @input="recalcLine(idx)" /></td>
+                                    <td class="px-2 py-1.5">
+                                        <Select v-model="line.vat_rate" @update:model-value="recalcLine(idx)">
+                                            <SelectTrigger class="h-7 text-xs"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="18">18%</SelectItem>
+                                                <SelectItem value="5">5%</SelectItem>
+                                                <SelectItem value="0">0%</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </td>
+                                    <td class="px-2 py-1.5 text-right font-mono">{{ fmt(line.line_total_ex_vat) }}</td>
+                                    <td class="px-2 py-1.5 text-right font-mono text-muted-foreground">{{ fmt(line.vat_amount) }}</td>
+                                    <td class="px-2 py-1.5 text-right font-mono font-semibold">{{ fmt(line.line_total_inc_vat) }}</td>
+                                    <td class="px-2 py-1.5 text-center"><button type="button" class="text-destructive hover:opacity-70" @click="removeLine(idx)"><X class="size-3.5" /></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div v-if="createForm.lines.length > 0" class="flex justify-end">
+                    <div class="w-72 rounded-lg border p-4">
+                        <div class="flex justify-between py-1 text-sm"><span class="text-muted-foreground">Вкупно без ДДВ:</span><span class="font-mono">{{ fmt(totals.sub) }}</span></div>
+                        <div class="flex justify-between py-1 text-sm"><span class="text-muted-foreground">ДДВ:</span><span class="font-mono">{{ fmt(totals.vat) }}</span></div>
+                        <div class="mt-1 flex justify-between border-t pt-2 text-base font-semibold"><span>Вкупно со ДДВ:</span><span class="font-mono">{{ fmt(totals.total) }}</span></div>
+                    </div>
+                </div>
+
+                <div class="grid gap-1.5">
+                    <Label>Белешка</Label>
+                    <Input v-model="createForm.notes" placeholder="Опционална белешка…" />
+                </div>
+            </div>
+
+            <DialogFooter>
+                <Button variant="outline" @click="showCreate = false">Откажи</Button>
+                <Button :disabled="createForm.processing" @click="submitCreate">
+                    {{ createForm.processing ? "Зачувување…" : "Зачувај фактура" }}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 </template>

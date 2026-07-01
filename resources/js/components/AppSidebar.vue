@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     LayoutGrid,
@@ -52,7 +52,7 @@ const sectionNavItems = computed<NavItem[]>(() => {
             title: 'Материјално',
             href: '/companies',
             icon: BookMarked,
-            isActive: ['/companies', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices'].some(p => isCurrentOrParentUrl(p)),
+            isActive: ['/companies', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices', '/kontragenti'].some(p => isCurrentOrParentUrl(p)),
         });
         items.push({
             title: 'Плати и ЧР',

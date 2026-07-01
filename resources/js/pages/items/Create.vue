@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,20 +17,34 @@ defineOptions({
     },
 });
 
-type Company = { id: number; name: string };
-defineProps<{ companies: Company[] }>();
+type Company   = { id: number; name: string };
+type Warehouse = { id: number; company_id: number; name: string };
+
+const props = defineProps<{
+    companies:  Company[];
+    warehouses: Warehouse[];
+}>();
 
 const form = useForm({
-    company_id: '',
-    code: '',
-    name: '',
-    unit: 'бр',
-    vat_category: '18',
-    price_without_vat: '',
-    is_active: true,
+    company_id:           '',
+    code:                 '',
+    name:                 '',
+    unit:                 'бр',
+    vat_category:         '18',
+    price_without_vat:    '',
+    is_active:            true,
+    initial_warehouse_id: '',
+    initial_stock:        '',
+    initial_date:         new Date().toISOString().split('T')[0],
 });
 
-function submit() { form.post('/items'); }
+const availableWarehouses = computed(() =>
+    props.warehouses.filter(w => !form.company_id || w.company_id === Number(form.company_id))
+);
+
+function submit() {
+    form.post('/items');
+}
 </script>
 
 <template>
@@ -39,6 +54,7 @@ function submit() { form.post('/items'); }
             <CardHeader><CardTitle>Нов артикл</CardTitle></CardHeader>
             <CardContent>
                 <form class="grid gap-4" @submit.prevent="submit">
+
                     <div class="grid gap-1.5">
                         <Label>Компанија *</Label>
                         <Select v-model="form.company_id">
@@ -90,6 +106,43 @@ function submit() { form.post('/items'); }
                     <div class="flex items-center gap-2">
                         <Checkbox v-model:checked="form.is_active" />
                         <Label>Активен</Label>
+                    </div>
+
+                    <!-- Почетна залиха (опционално) -->
+                    <div class="rounded-lg border border-dashed p-4">
+                        <p class="mb-3 text-sm font-medium">Почетна залиха (опционално)</p>
+                        <div class="grid gap-3">
+                            <div class="grid gap-1.5">
+                                <Label>Магацин</Label>
+                                <Select v-model="form.initial_warehouse_id">
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Избери магацин" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">— Без почетна залиха —</SelectItem>
+                                        <SelectItem
+                                            v-for="w in availableWarehouses"
+                                            :key="w.id"
+                                            :value="String(w.id)"
+                                        >
+                                            {{ w.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div v-if="form.initial_warehouse_id" class="grid grid-cols-2 gap-3">
+                                <div class="grid gap-1.5">
+                                    <Label>Количина</Label>
+                                    <Input v-model="form.initial_stock" type="number" step="0.001" min="0" placeholder="0.000" />
+                                    <p v-if="form.errors.initial_stock" class="text-xs text-destructive">{{ form.errors.initial_stock }}</p>
+                                </div>
+                                <div class="grid gap-1.5">
+                                    <Label>Датум</Label>
+                                    <Input v-model="form.initial_date" type="date" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex gap-3 pt-2">

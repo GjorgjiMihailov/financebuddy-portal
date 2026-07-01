@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\CompanyController;
@@ -7,6 +7,8 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\JournalEntryController;
+use App\Http\Controllers\KontragentController;
+use App\Http\Controllers\WarehouseMovementController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 use App\Http\Controllers\UserController;
@@ -36,11 +38,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ── Users ─────────────────────────────────────────────────────────────────
     Route::resource('users', UserController::class)->except(['show']);
 
+    // ── Контрагенти ───────────────────────────────────────────────────────────
+    Route::resource('kontragenti', KontragentController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('companies/{company}/kontragenti', [KontragentController::class, 'forCompany'])->name('companies.kontragenti');
+    Route::get('companies/{company}/items', [ItemController::class, 'forCompany'])->name('companies.items');
+
     // ── Материјално работење ─────────────────────────────────────────────────
     Route::resource('warehouses', WarehouseController::class)->only(['index', 'create', 'store', 'update', 'destroy']);
+    Route::get('warehouses/{warehouse}/inventory', [WarehouseController::class, 'inventory'])->name('warehouses.inventory');
+    Route::post('warehouse-movements', [WarehouseMovementController::class, 'store'])->name('warehouse-movements.store');
     Route::resource('items', ItemController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
-    Route::resource('purchase-invoices', PurchaseInvoiceController::class)->only(['index', 'create', 'store']);
-    Route::resource('sales-invoices', SalesInvoiceController::class)->only(['index', 'create', 'store']);
+    Route::resource('purchase-invoices', PurchaseInvoiceController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+    Route::resource('sales-invoices', SalesInvoiceController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
 
     // ── Вработени ─────────────────────────────────────────────────────────────
     Route::resource('employees', EmployeeController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
