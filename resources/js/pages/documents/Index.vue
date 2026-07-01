@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { FileText, Plus, Trash2 } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -34,9 +35,52 @@ const props = defineProps<{
     filters: { company_id?: string; status?: string };
 }>();
 
+const page = usePage();
+const canVerify = computed(() => {
+    const roles = (page.props.auth as any)?.user?.roles ?? [];
+    return roles.includes('admin') || roles.includes('accountant');
+});
+
+const selectedIds = ref<number[]>([]);
+
+const verifiableIds = computed(() =>
+    props.documents.data.filter(d => d.status === 'ai_processed').map(d => d.id)
+);
+
+const allSelected = computed(() =>
+    verifiableIds.value.length > 0 &&
+    verifiableIds.value.every(id => selectedIds.value.includes(id))
+);
+
+function toggleAll() {
+    if (allSelected.value) {
+        selectedIds.value = selectedIds.value.filter(id => !verifiableIds.value.includes(id));
+    } else {
+        const toAdd = verifiableIds.value.filter(id => !selectedIds.value.includes(id));
+        selectedIds.value = [...selectedIds.value, ...toAdd];
+    }
+}
+
+function toggleOne(id: number) {
+    const idx = selectedIds.value.indexOf(id);
+    if (idx === -1) {
+        selectedIds.value.push(id);
+    } else {
+        selectedIds.value.splice(idx, 1);
+    }
+}
+
+function bulkVerify() {
+    if (selectedIds.value.length === 0) return;
+    router.post('/documents/bulk-verify', { ids: selectedIds.value }, {
+        onSuccess: () => { selectedIds.value = []; },
+    });
+}
+
 const deleteTarget = ref<DocumentFile | null>(null);
 
 function applyFilter(key: string, value: string) {
+    selectedIds.value = [];
     router.get('/documents', { ...props.filters, [key]: value || undefined }, {
         preserveState: true,
         replace: true,
@@ -97,10 +141,26 @@ function formatSize(bytes: number): string {
             </select>
         </div>
 
+        <!-- Bulk action bar -->
+        <div v-if="canVerify && selectedIds.length > 0" class="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2.5">
+            <span class="text-sm font-medium">
+                {{ selectedIds.length }} {{ selectedIds.length === 1 ? 'документ избран' : 'документи избрани' }}
+            </span>
+            <Button size="sm" @click="bulkVerify">Верификувај</Button>
+            <Button size="sm" variant="ghost" @click="selectedIds = []">Откажи</Button>
+        </div>
+
         <div class="rounded-lg border">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
+                        <th v-if="canVerify" class="w-10 px-4 py-3" @click.stop>
+                            <Checkbox
+                                :checked="allSelected"
+                                :disabled="verifiableIds.length === 0"
+                                @update:checked="toggleAll"
+                            />
+                        </th>
                         <th class="px-4 py-3 text-left font-medium text-muted-foreground">Документ</th>
                         <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компанија</th>
                         <th class="px-4 py-3 text-left font-medium text-muted-foreground">Тип</th>
@@ -111,7 +171,7 @@ function formatSize(bytes: number): string {
                 </thead>
                 <tbody>
                     <tr v-if="documents.data.length === 0">
-                        <td colspan="6" class="py-16 text-center text-muted-foreground">
+                        <td :colspan="canVerify ? 7 : 6" class="py-16 text-center text-muted-foreground">
                             <FileText class="mx-auto mb-3 size-10 opacity-30" />
                             <p class="font-medium">Нема документи</p>
                             <p class="text-xs">Прикачи го првиот документ со копчето горе</p>
@@ -123,6 +183,13 @@ function formatSize(bytes: number): string {
                         class="cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/30"
                         @click="router.visit(`/documents/${doc.id}`)"
                     >
+                        <td v-if="canVerify" class="px-4 py-3" @click.stop>
+                            <Checkbox
+                                :checked="selectedIds.includes(doc.id)"
+                                :disabled="doc.status !== 'ai_processed'"
+                                @update:checked="toggleOne(doc.id)"
+                            />
+                        </td>
                         <td class="px-4 py-3">
                             <p class="font-medium truncate max-w-48">{{ doc.filename }}</p>
                             <p class="text-xs text-muted-foreground">{{ formatSize(doc.file_size) }}</p>

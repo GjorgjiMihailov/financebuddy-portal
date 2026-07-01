@@ -190,6 +190,34 @@ class DocumentController extends Controller
         }
     }
 
+    public function bulkVerify(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->hasAnyRole(['admin', 'accountant']), 403);
+
+        $ids = $request->validate([
+            'ids'   => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ])['ids'];
+
+        $documents = Document::whereIn('id', $ids)
+            ->where('status', DocumentStatus::AiProcessed)
+            ->get();
+
+        foreach ($documents as $document) {
+            $document->update([
+                'status'      => DocumentStatus::Verified,
+                'verified_by' => $request->user()->id,
+                'verified_at' => now(),
+            ]);
+            $document->extraction?->update(['is_confirmed' => true]);
+        }
+
+        $count = $documents->count();
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Верификувани {$count} документи."]);
+
+        return to_route('documents.index');
+    }
+
     public function verify(Document $document, Request $request): RedirectResponse
     {
         $this->authorize('verify', $document);
