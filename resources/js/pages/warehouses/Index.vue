@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import MaterijaliTabs from '@/components/MaterijaliTabs.vue';
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Магацини', href: '/warehouses' }],
+        breadcrumbs: [{ title: 'Материјало', href: '/kontragenti' }, { title: 'Магацини', href: '/warehouses' }],
     },
 });
 
@@ -50,6 +51,7 @@ function deleteWarehouse(w: Warehouse) {
 
 <template>
     <Head title="Магацини" />
+    <MaterijaliTabs />
 
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center justify-between">

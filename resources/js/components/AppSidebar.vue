@@ -3,11 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     LayoutGrid,
     FileText,
-    Handshake,
-    Warehouse,
     Package,
-    PackageCheck,
-    Receipt,
     Users,
     Settings2,
     Building2,
@@ -35,9 +31,9 @@ const page = usePage();
 const { isCurrentOrParentUrl } = useCurrentUrl();
 
 const roles = computed(() => (page.props.auth as any)?.user?.roles ?? []);
-const isAdmin     = computed(() => roles.value.includes('admin'));
+const isAdmin      = computed(() => roles.value.includes('admin'));
 const isAccountant = computed(() => roles.value.includes('accountant'));
-const isStaff     = computed(() => isAdmin.value || isAccountant.value);
+const isStaff      = computed(() => isAdmin.value || isAccountant.value);
 
 const currentCompany = computed(() => (page.props as any).current_company as { id: number; name: string } | null);
 
@@ -60,39 +56,14 @@ const financesItems: NavItem[] = [
     },
 ];
 
-// ── Материјально (под-ставки) ─────────────────────────────────────────────────
-const materijalnoItems: NavItem[] = [
-    {
-        title: 'Кооперанти',
-        href: '/kontragenti',
-        icon: Handshake,
-        isActive: isCurrentOrParentUrl('/kontragenti'),
-    },
-    {
-        title: 'Магацини',
-        href: '/warehouses',
-        icon: Warehouse,
-        isActive: isCurrentOrParentUrl('/warehouses'),
-    },
-    {
-        title: 'Артикли',
-        href: '/items',
-        icon: Package,
-        isActive: isCurrentOrParentUrl('/items'),
-    },
-    {
-        title: 'Влезни фактури',
-        href: '/purchase-invoices',
-        icon: PackageCheck,
-        isActive: isCurrentOrParentUrl('/purchase-invoices'),
-    },
-    {
-        title: 'Излезни фактури',
-        href: '/sales-invoices',
-        icon: Receipt,
-        isActive: isCurrentOrParentUrl('/sales-invoices'),
-    },
-];
+// ── Материјало ────────────────────────────────────────────────────────────────
+const materijalnoItems = computed<NavItem[]>(() => [{
+    title: 'Материјало',
+    href: '/kontragenti',
+    icon: Package,
+    isActive: ['/kontragenti', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices']
+        .some(p => isCurrentOrParentUrl(p)),
+}]);
 
 // ── Плати и ЧР ───────────────────────────────────────────────────────────────
 const hrItems: NavItem[] = [
@@ -169,7 +140,7 @@ const adminItems: NavItem[] = [
         <SidebarContent>
             <NavMain :items="dashboardItems" />
             <NavMain :items="financesItems" />
-            <NavMain v-if="isStaff" :items="materijalnoItems" label="Материјально" />
+            <NavMain v-if="isStaff" :items="materijalnoItems" />
             <NavMain v-if="isStaff" :items="hrItems" />
             <NavMain v-if="isStaff" :items="settingsItems" label="Подесувања" />
             <NavMain v-if="isAdmin" :items="adminItems" label="Систем" />

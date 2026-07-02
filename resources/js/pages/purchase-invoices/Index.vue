@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Head, router, useForm, usePage } from "@inertiajs/vue3";
 import { Plus, Eye, Trash2, FileText, X, BookCheck } from "@lucide/vue";
 import { ref, computed, watch } from "vue";
@@ -8,14 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import MaterijaliTabs from '@/components/MaterijaliTabs.vue';
 import { Link } from "@inertiajs/vue3";
 
 defineOptions({
     layout: {
-        breadcrumbs: [
-            { title: "Материјално", href: "/purchase-invoices" },
-            { title: "Влезни фактури", href: "/purchase-invoices" },
-        ],
+        breadcrumbs: [{ title: 'Материјало', href: '/kontragenti' }, { title: 'Влезни фактури', href: '/purchase-invoices' }],
     },
 });
 
@@ -170,6 +168,7 @@ function deleteInvoice(inv: Invoice) {
 
 <template>
     <Head title="Влезни фактури" />
+    <MaterijaliTabs />
 
     <div class="flex flex-col gap-6 p-6">
 
