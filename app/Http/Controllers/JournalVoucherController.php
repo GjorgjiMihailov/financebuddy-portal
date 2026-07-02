@@ -145,7 +145,7 @@ class JournalVoucherController extends Controller
         $companyId = $this->currentCompanyId($request);
         abort_unless($journalEntry->company_id === $companyId, 403);
 
-        if ($journalEntry->status === JournalEntryStatus::Posted) {
+        if ($journalEntry->status === JournalEntryStatus::Posted && ! $request->user()->hasRole('admin')) {
             return response()->json(['error' => 'Прокнижен налог не може да се менува.'], 422);
         }
 
@@ -170,7 +170,7 @@ class JournalVoucherController extends Controller
         $companyId = $this->currentCompanyId($request);
         abort_unless($journalEntry->company_id === $companyId, 403);
 
-        if ($journalEntry->status === JournalEntryStatus::Posted) {
+        if ($journalEntry->status === JournalEntryStatus::Posted && ! $request->user()->hasRole('admin')) {
             return response()->json(['error' => 'Не може да се избрише прокнижен налог.'], 422);
         }
 
