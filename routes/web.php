@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\CompanyContextController;
