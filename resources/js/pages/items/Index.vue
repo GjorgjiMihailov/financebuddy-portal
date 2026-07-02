@@ -9,7 +9,7 @@ import MaterijaliTabs from '@/components/MaterijaliTabs.vue';
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Материјало', href: '/kontragenti' }, { title: 'Артикли', href: '/items' }],
+        breadcrumbs: [{ title: 'Материјално', href: '/kontragenti' }, { title: 'Артикли', href: '/items' }],
     },
 });
 

@@ -13,7 +13,7 @@ import { Link } from '@inertiajs/vue3';
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Материјало', href: '/kontragenti' }, { title: 'Излезни фактури', href: '/sales-invoices' }],
+        breadcrumbs: [{ title: 'Материјално', href: '/kontragenti' }, { title: 'Излезни фактури', href: '/sales-invoices' }],
     },
 });
 

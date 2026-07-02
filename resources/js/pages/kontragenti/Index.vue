@@ -19,7 +19,7 @@ import {
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Материјало', href: '/kontragenti' }, { title: 'Кооперанти', href: '/kontragenti' }],
+        breadcrumbs: [{ title: 'Материјално', href: '/kontragenti' }, { title: 'Кооперанти', href: '/kontragenti' }],
     },
 });
 
