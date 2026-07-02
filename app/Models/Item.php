@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Models;
 
@@ -16,6 +16,8 @@ class Item extends Model
         'vat_category',
         'price_without_vat',
         'is_active',
+        'is_service',
+        'is_macedonian',
     ];
 
     protected function casts(): array
@@ -23,6 +25,8 @@ class Item extends Model
         return [
             'price_without_vat' => 'decimal:2',
             'is_active'         => 'boolean',
+            'is_service'        => 'boolean',
+            'is_macedonian'     => 'boolean',
         ];
     }
 

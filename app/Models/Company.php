@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Models;
 
@@ -15,11 +15,15 @@ class Company extends Model
     protected $fillable = [
         'name',
         'tax_id',
+        'embs',
         'vat_number',
         'is_vat_registered',
         'address',
         'email',
         'phone',
+        'logo_path',
+        'bank_name',
+        'bank_account',
         'created_by',
     ];
 

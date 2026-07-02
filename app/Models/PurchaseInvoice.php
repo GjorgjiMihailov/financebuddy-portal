@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Models;
 
@@ -10,6 +10,7 @@ class PurchaseInvoice extends Model
 {
     protected $fillable = [
         'company_id',
+        'warehouse_id',
         'kontragent_id',
         'document_id',
         'supplier_name',
@@ -35,6 +36,11 @@ class PurchaseInvoice extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function kontragent(): BelongsTo

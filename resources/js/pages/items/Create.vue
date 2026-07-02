@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,8 @@ const form = useForm({
     vat_category:         '18',
     price_without_vat:    '',
     is_active:            true,
+    is_service:           false,
+    is_macedonian:        false,
     initial_warehouse_id: '',
     initial_stock:        '',
     initial_date:         new Date().toISOString().split('T')[0],
@@ -103,13 +105,24 @@ function submit() {
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                        <Checkbox v-model:checked="form.is_active" />
-                        <Label>Активен</Label>
+                    <!-- Карактеристики -->
+                    <div class="grid gap-2.5">
+                        <div class="flex items-center gap-2">
+                            <Checkbox v-model:checked="form.is_active" />
+                            <Label>Активен</Label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Checkbox v-model:checked="form.is_service" />
+                            <Label>Услуга <span class="text-xs text-muted-foreground">(не се следи залиха)</span></Label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Checkbox v-model:checked="form.is_macedonian" />
+                            <Label>Македонски производ</Label>
+                        </div>
                     </div>
 
-                    <!-- Почетна залиха (опционално) -->
-                    <div class="rounded-lg border border-dashed p-4">
+                    <!-- Почетна залиха (само за производи) -->
+                    <div v-if="!form.is_service" class="rounded-lg border border-dashed p-4">
                         <p class="mb-3 text-sm font-medium">Почетна залиха (опционално)</p>
                         <div class="grid gap-3">
                             <div class="grid gap-1.5">

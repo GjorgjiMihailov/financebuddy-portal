@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers;
 
@@ -66,6 +66,8 @@ class ItemController extends Controller
             'vat_category'         => ['required', 'in:0,5,18'],
             'price_without_vat'    => ['required', 'numeric', 'min:0'],
             'is_active'            => ['boolean'],
+            'is_service'           => ['boolean'],
+            'is_macedonian'        => ['boolean'],
             'initial_warehouse_id' => ['nullable', 'exists:warehouses,id'],
             'initial_stock'        => ['nullable', 'numeric', 'min:0.001'],
             'initial_date'         => ['nullable', 'date'],
@@ -75,7 +77,12 @@ class ItemController extends Controller
 
         $item = Item::create(array_diff_key($validated, array_flip(['initial_warehouse_id', 'initial_stock', 'initial_date'])));
 
-        if (!empty($validated['initial_warehouse_id']) && !empty($validated['initial_stock']) && $validated['initial_stock'] > 0) {
+        if (
+            ! ($validated['is_service'] ?? false) &&
+            ! empty($validated['initial_warehouse_id']) &&
+            ! empty($validated['initial_stock']) &&
+            $validated['initial_stock'] > 0
+        ) {
             WarehouseMovement::create([
                 'warehouse_id'   => $validated['initial_warehouse_id'],
                 'item_id'        => $item->id,
@@ -96,11 +103,8 @@ class ItemController extends Controller
 
     public function edit(Item $item): Response
     {
-        $companies = Company::orderBy('name')->get(['id', 'name']);
-
         return Inertia::render('items/Edit', [
-            'item'      => $item,
-            'companies' => $companies,
+            'item' => $item,
         ]);
     }
 
@@ -112,6 +116,8 @@ class ItemController extends Controller
             'vat_category'      => ['required', 'in:0,5,18'],
             'price_without_vat' => ['required', 'numeric', 'min:0'],
             'is_active'         => ['boolean'],
+            'is_service'        => ['boolean'],
+            'is_macedonian'     => ['boolean'],
         ]);
 
         $item->update($validated);
@@ -135,7 +141,7 @@ class ItemController extends Controller
         $items = Item::where('company_id', $company->id)
             ->where('is_active', true)
             ->orderBy('code')
-            ->get(['id', 'code', 'name', 'unit', 'price_without_vat', 'vat_category']);
+            ->get(['id', 'code', 'name', 'unit', 'price_without_vat', 'vat_category', 'is_service']);
 
         return response()->json($items);
     }

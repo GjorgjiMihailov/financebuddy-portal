@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\CompanyContextController;
@@ -6,6 +6,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\KontragentController;
@@ -23,6 +24,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('select-company', [CompanyContextController::class, 'select'])->name('company.select');
     Route::post('select-company', [CompanyContextController::class, 'store'])->name('company.store');
     Route::post('clear-company', [CompanyContextController::class, 'clear'])->name('company.clear');
+
+    // Exchange rate API (без company.selected — само auth)
+    Route::get('api/exchange-rate', [ExchangeRateController::class, 'show'])->name('exchange-rate');
 });
 
 // ── Сите останати рути — со company.selected middleware ──────────────────────
@@ -57,8 +61,13 @@ Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
     Route::get('warehouses/{warehouse}/inventory', [WarehouseController::class, 'inventory'])->name('warehouses.inventory');
     Route::post('warehouse-movements', [WarehouseMovementController::class, 'store'])->name('warehouse-movements.store');
     Route::resource('items', ItemController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
     Route::resource('purchase-invoices', PurchaseInvoiceController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+    Route::post('purchase-invoices/{purchaseInvoice}/book', [PurchaseInvoiceController::class, 'book'])->name('purchase-invoices.book');
+
     Route::resource('sales-invoices', SalesInvoiceController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+    Route::post('sales-invoices/{salesInvoice}/send', [SalesInvoiceController::class, 'send'])->name('sales-invoices.send');
+    Route::post('sales-invoices/{salesInvoice}/book', [SalesInvoiceController::class, 'book'])->name('sales-invoices.book');
 
     // ── Вработени ─────────────────────────────────────────────────────────────
     Route::resource('employees', EmployeeController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
