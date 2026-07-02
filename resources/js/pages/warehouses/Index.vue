@@ -69,11 +69,11 @@ function deleteWarehouse(w: Warehouse) {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Магацин</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Локација</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компанија</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
-                        <th class="px-4 py-3"></th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Магацин</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Локација</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Компанија</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -81,15 +81,15 @@ function deleteWarehouse(w: Warehouse) {
                         <td colspan="5" class="py-12 text-center text-muted-foreground">Нема магацини</td>
                     </tr>
                     <tr v-for="w in warehouses.data" :key="w.id" class="border-b last:border-0 hover:bg-muted/30">
-                        <td class="px-4 py-3 font-medium">{{ w.name }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ w.location ?? '—' }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ w.company.name }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5 font-medium">{{ w.name }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ w.location ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ w.company.name }}</td>
+                        <td class="px-3 py-1.5">
                             <Badge :variant="w.is_active ? 'secondary' : 'outline'">
                                 {{ w.is_active ? 'Активен' : 'Неактивен' }}
                             </Badge>
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-1.5 text-right">
                             <div class="flex justify-end gap-1">
                                 <Button variant="outline" size="sm" as-child>
                                     <Link :href="`/warehouses/${w.id}/inventory`">

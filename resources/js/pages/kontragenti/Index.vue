@@ -216,13 +216,13 @@ function deleteKontragent(k: Kontragent) {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Назив</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">ЕДБ</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компанија</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Тип</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">ДДВ</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
-                        <th class="px-4 py-3"></th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Назив</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">ЕДБ</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Компанија</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Тип</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">ДДВ</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -238,23 +238,23 @@ function deleteKontragent(k: Kontragent) {
                         class="border-b last:border-0 hover:bg-muted/30"
                         :class="{ 'opacity-50': !k.is_active }"
                     >
-                        <td class="px-4 py-3 font-medium">{{ k.name }}</td>
-                        <td class="px-4 py-3 font-mono text-xs">{{ k.edb }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ k.company.name }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5 font-medium">{{ k.name }}</td>
+                        <td class="px-3 py-1.5 font-mono text-xs">{{ k.edb }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ k.company.name }}</td>
+                        <td class="px-3 py-1.5">
                             <Badge :variant="TYPE_VARIANT[k.type]" class="text-xs">
                                 {{ TYPE_LABELS[k.type] }}
                             </Badge>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <Badge v-if="k.is_vat_payer" variant="secondary" class="text-xs">ДДВ</Badge>
                             <span v-else class="text-xs text-muted-foreground">—</span>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <Badge v-if="k.is_active" variant="secondary" class="text-xs">Активен</Badge>
                             <Badge v-else variant="outline" class="text-xs">Неактивен</Badge>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <div class="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" @click="openEdit(k)" title="Уреди">
                                     <Pencil class="size-4" />

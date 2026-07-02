@@ -200,12 +200,12 @@ function deleteInvoice(inv: Invoice) {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Број</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Датум</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Добавувач</th>
-                        <th class="px-4 py-3 text-right font-medium text-muted-foreground">Вкупно</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
-                        <th class="px-4 py-3"></th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Број</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Датум</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Добавувач</th>
+                        <th class="px-3 py-1.5 text-right font-medium text-muted-foreground">Вкупно</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -216,14 +216,14 @@ function deleteInvoice(inv: Invoice) {
                         </td>
                     </tr>
                     <tr v-for="inv in invoices.data" :key="inv.id" class="border-b last:border-0 hover:bg-muted/30">
-                        <td class="px-4 py-3 font-mono font-medium">{{ inv.invoice_number }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ inv.date }}</td>
-                        <td class="px-4 py-3">{{ inv.kontragent?.name ?? inv.supplier_name ?? "—" }}</td>
-                        <td class="px-4 py-3 text-right font-mono font-semibold">{{ fmt(inv.total_amount) }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5 font-mono font-medium">{{ inv.invoice_number }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ inv.date }}</td>
+                        <td class="px-3 py-1.5">{{ inv.kontragent?.name ?? inv.supplier_name ?? "—" }}</td>
+                        <td class="px-3 py-1.5 text-right font-mono font-semibold">{{ fmt(inv.total_amount) }}</td>
+                        <td class="px-3 py-1.5">
                             <Badge :variant="STATUS_VARIANT[inv.status]" class="text-xs">{{ STATUS_LABELS[inv.status] }}</Badge>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <div class="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" as-child title="Преглед">
                                     <Link :href="`/purchase-invoices/${inv.id}`"><Eye class="size-4" /></Link>

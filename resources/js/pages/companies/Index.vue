@@ -58,12 +58,12 @@ function doDelete() {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Назив</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">ЕДБ</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">ДДВ</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Е-пошта</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Телефон</th>
-                        <th class="w-24 px-4 py-3" />
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Назив</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">ЕДБ</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">ДДВ</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Е-пошта</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Телефон</th>
+                        <th class="w-24 px-3 py-1.5" />
                     </tr>
                 </thead>
                 <tbody>
@@ -80,15 +80,15 @@ function doDelete() {
                         class="cursor-pointer border-b last:border-0 hover:bg-muted/30 transition-colors"
                         @click="router.visit(`/companies/${company.id}`)"
                     >
-                        <td class="px-4 py-3 font-medium">{{ company.name }}</td>
-                        <td class="px-4 py-3 font-mono text-xs text-muted-foreground">{{ company.tax_id }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5 font-medium">{{ company.name }}</td>
+                        <td class="px-3 py-1.5 font-mono text-xs text-muted-foreground">{{ company.tax_id }}</td>
+                        <td class="px-3 py-1.5">
                             <Badge v-if="company.is_vat_registered" variant="secondary">ДДВ</Badge>
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ company.email ?? '—' }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ company.phone ?? '—' }}</td>
-                        <td class="px-4 py-3" @click.stop>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ company.email ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ company.phone ?? '—' }}</td>
+                        <td class="px-3 py-1.5" @click.stop>
                             <div class="flex items-center justify-end gap-1">
                                 <Button variant="ghost" size="icon" as-child>
                                     <Link :href="`/companies/${company.id}/edit`">

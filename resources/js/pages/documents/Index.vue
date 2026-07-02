@@ -143,19 +143,19 @@ function formatSize(bytes: number): string {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th v-if="canVerify" class="w-10 px-4 py-3" @click.stop>
+                        <th v-if="canVerify" class="w-10 px-3 py-1.5" @click.stop>
                             <Checkbox
                                 :checked="allSelected"
                                 :disabled="verifiableIds.length === 0"
                                 @update:checked="toggleAll"
                             />
                         </th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Документ</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компанија</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Тип</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Прикачено</th>
-                        <th class="w-16 px-4 py-3" />
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Документ</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Компанија</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Тип</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Прикачено</th>
+                        <th class="w-16 px-3 py-1.5" />
                     </tr>
                 </thead>
                 <tbody>
@@ -172,28 +172,28 @@ function formatSize(bytes: number): string {
                         class="cursor-pointer border-b last:border-0 transition-colors hover:bg-muted/30"
                         @click="router.visit(`/documents/${doc.id}`)"
                     >
-                        <td v-if="canVerify" class="px-4 py-3" @click.stop>
+                        <td v-if="canVerify" class="px-3 py-1.5" @click.stop>
                             <Checkbox
                                 :checked="selectedIds.includes(doc.id)"
                                 :disabled="doc.status !== 'ai_processed'"
                                 @update:checked="toggleOne(doc.id)"
                             />
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <p class="font-medium truncate max-w-48">{{ doc.filename }}</p>
                             <p class="text-xs text-muted-foreground">{{ formatSize(doc.file_size) }}</p>
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ doc.company?.name ?? '—' }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ DOCUMENT_TYPE_LABELS[doc.type] }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ doc.company?.name ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ DOCUMENT_TYPE_LABELS[doc.type] }}</td>
+                        <td class="px-3 py-1.5">
                             <Badge :variant="DOCUMENT_STATUS_VARIANT[doc.status as DocumentStatus]">
                                 {{ DOCUMENT_STATUS_LABELS[doc.status as DocumentStatus] }}
                             </Badge>
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground text-xs">
+                        <td class="px-3 py-1.5 text-muted-foreground text-xs">
                             {{ new Date(doc.created_at).toLocaleDateString('mk-MK') }}
                         </td>
-                        <td class="px-4 py-3" @click.stop>
+                        <td class="px-3 py-1.5" @click.stop>
                             <Button
                                 variant="ghost"
                                 size="icon"

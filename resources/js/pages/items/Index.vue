@@ -104,15 +104,15 @@ function formatStock(val: string | null): string {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Шифра</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Назив</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">ЈМ</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">ДДВ %</th>
-                        <th class="px-4 py-3 text-right font-medium text-muted-foreground">Цена без ДДВ</th>
-                        <th class="px-4 py-3 text-right font-medium text-muted-foreground">Залихи</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компанија</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
-                        <th class="px-4 py-3"></th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Шифра</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Назив</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">ЈМ</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">ДДВ %</th>
+                        <th class="px-3 py-1.5 text-right font-medium text-muted-foreground">Цена без ДДВ</th>
+                        <th class="px-3 py-1.5 text-right font-medium text-muted-foreground">Залихи</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Компанија</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -120,21 +120,21 @@ function formatStock(val: string | null): string {
                         <td colspan="9" class="py-12 text-center text-muted-foreground">Нема артикли</td>
                     </tr>
                     <tr v-for="item in items.data" :key="item.id" class="border-b last:border-0 hover:bg-muted/30" :class="{ 'opacity-50': !item.is_active }">
-                        <td class="px-4 py-3 font-mono text-xs">{{ item.code }}</td>
-                        <td class="px-4 py-3 font-medium">{{ item.name }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ item.unit }}</td>
-                        <td class="px-4 py-3">{{ item.vat_category }}%</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ formatPrice(item.price_without_vat) }}</td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-1.5 font-mono text-xs">{{ item.code }}</td>
+                        <td class="px-3 py-1.5 font-medium">{{ item.name }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ item.unit }}</td>
+                        <td class="px-3 py-1.5">{{ item.vat_category }}%</td>
+                        <td class="px-3 py-1.5 text-right font-mono">{{ formatPrice(item.price_without_vat) }}</td>
+                        <td class="px-3 py-1.5 text-right">
                             <span :class="parseFloat(item.current_stock ?? '0') > 0 ? 'font-semibold text-green-700' : 'text-muted-foreground'">
                                 {{ formatStock(item.current_stock) }}
                             </span>
                         </td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ item.company.name }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ item.company.name }}</td>
+                        <td class="px-3 py-1.5">
                             <Badge :variant="item.is_active ? 'secondary' : 'outline'">{{ item.is_active ? 'Активен' : 'Неактивен' }}</Badge>
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-1.5 text-right">
                             <Button variant="ghost" size="sm" as-child>
                                 <Link :href="`/items/${item.id}/edit`">Уреди</Link>
                             </Button>

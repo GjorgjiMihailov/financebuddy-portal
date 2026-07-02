@@ -59,10 +59,10 @@ function doDelete() {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Корисник</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Улога</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компании</th>
-                        <th class="w-24 px-4 py-3" />
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Корисник</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Улога</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Компании</th>
+                        <th class="w-24 px-3 py-1.5" />
                     </tr>
                 </thead>
                 <tbody>
@@ -78,11 +78,11 @@ function doDelete() {
                         :key="user.id"
                         class="border-b last:border-0"
                     >
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <div class="font-medium">{{ user.name }}</div>
                             <div class="text-xs text-muted-foreground">{{ user.email }}</div>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <Badge
                                 v-if="user.role"
                                 :variant="USER_ROLE_VARIANT[user.role as UserRole]"
@@ -91,7 +91,7 @@ function doDelete() {
                             </Badge>
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <span v-if="user.companies.length === 0" class="text-muted-foreground">—</span>
                             <div v-else class="flex flex-wrap gap-1">
                                 <Badge
@@ -104,7 +104,7 @@ function doDelete() {
                                 </Badge>
                             </div>
                         </td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5">
                             <div class="flex items-center justify-end gap-1">
                                 <Button variant="ghost" size="icon" as-child>
                                     <Link :href="`/users/${user.id}/edit`">

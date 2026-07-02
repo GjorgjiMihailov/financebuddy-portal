@@ -83,13 +83,13 @@ function formatSalary(val: string): string {
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Вработен</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">ЕМБГ</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Позиција</th>
-                        <th class="px-4 py-3 text-right font-medium text-muted-foreground">Нето плата</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Компанија</th>
-                        <th class="px-4 py-3 text-left font-medium text-muted-foreground">Статус</th>
-                        <th class="px-4 py-3"></th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Вработен</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">ЕМБГ</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Позиција</th>
+                        <th class="px-3 py-1.5 text-right font-medium text-muted-foreground">Нето плата</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Компанија</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-3 py-1.5"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -97,17 +97,17 @@ function formatSalary(val: string): string {
                         <td colspan="7" class="py-12 text-center text-muted-foreground">Нема вработени</td>
                     </tr>
                     <tr v-for="emp in employees.data" :key="emp.id" class="border-b last:border-0 hover:bg-muted/30">
-                        <td class="px-4 py-3 font-medium">{{ emp.first_name }} {{ emp.last_name }}</td>
-                        <td class="px-4 py-3 font-mono text-muted-foreground">{{ emp.embg ?? '—' }}</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ emp.position ?? '—' }}</td>
-                        <td class="px-4 py-3 text-right font-mono">{{ formatSalary(emp.net_salary) }} ден.</td>
-                        <td class="px-4 py-3 text-muted-foreground">{{ emp.company.name }}</td>
-                        <td class="px-4 py-3">
+                        <td class="px-3 py-1.5 font-medium">{{ emp.first_name }} {{ emp.last_name }}</td>
+                        <td class="px-3 py-1.5 font-mono text-muted-foreground">{{ emp.embg ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ emp.position ?? '—' }}</td>
+                        <td class="px-3 py-1.5 text-right font-mono">{{ formatSalary(emp.net_salary) }} ден.</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ emp.company.name }}</td>
+                        <td class="px-3 py-1.5">
                             <Badge :variant="emp.is_active ? 'secondary' : 'outline'">
                                 {{ emp.is_active ? 'Активен' : 'Неактивен' }}
                             </Badge>
                         </td>
-                        <td class="px-4 py-3 text-right">
+                        <td class="px-3 py-1.5 text-right">
                             <div class="flex justify-end gap-1">
                                 <Button variant="ghost" size="icon" as-child>
                                     <Link :href="`/employees/${emp.id}/edit`"><Pencil class="size-4" /></Link>
