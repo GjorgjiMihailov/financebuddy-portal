@@ -1,9 +1,10 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     LayoutGrid,
     FileText,
     BookMarked,
+    Building2,
     Users,
     Settings2,
     UserCog,
@@ -57,9 +58,9 @@ const sectionNavItems = computed<NavItem[]>(() => {
     if (isStaff.value) {
         items.push({
             title: 'Материјално',
-            href: '/companies',
+            href: '/kontragenti',
             icon: BookMarked,
-            isActive: ['/companies', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices', '/kontragenti'].some(p => isCurrentOrParentUrl(p)),
+            isActive: ['/kontragenti', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices'].some(p => isCurrentOrParentUrl(p)),
         });
         items.push({
             title: 'Плати и ЧР',
@@ -76,6 +77,12 @@ const sectionNavItems = computed<NavItem[]>(() => {
     }
 
     if (isAdmin.value) {
+        items.push({
+            title: 'Обврзници',
+            href: '/companies',
+            icon: Building2,
+            isActive: isCurrentOrParentUrl('/companies'),
+        });
         items.push({
             title: 'Администрација',
             href: '/users',
@@ -129,3 +136,4 @@ const sectionNavItems = computed<NavItem[]>(() => {
     </Sidebar>
     <slot />
 </template>
+
