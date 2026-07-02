@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { formatDate } from '@/lib/formatDate';
 import { Eye, FileText } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,9 +37,7 @@ defineProps<{ entries: Paginated }>();
 const STATUS_LABEL: Record<string, string> = { draft: 'Нацрт', posted: 'Прокнижено' };
 const STATUS_VARIANT: Record<string, 'outline' | 'secondary'> = { draft: 'outline', posted: 'secondary' };
 
-function formatDate(d: string): string {
-    const [y, m, day] = d.split('-');
-    return `${day}.${m}.${y}`;
+.${m}.${y}`;
 }
 </script>
 

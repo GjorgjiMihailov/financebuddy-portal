@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from "@inertiajs/vue3";
 import { ArrowLeft, Printer } from "@lucide/vue";
+import { formatDate } from '@/lib/formatDate';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -104,9 +105,9 @@ function printPage() { window.print(); }
                 <div class="col-span-1 rounded-lg bg-gray-50 p-4 print:border print:bg-transparent">
                     <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Датуми</p>
                     <div class="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1 text-sm">
-                        <span class="text-gray-500">Датум:</span><span class="font-medium">{{ invoice.date }}</span>
+                        <span class="text-gray-500">Датум:</span><span class="font-medium">{{ formatDate(invoice.date) }}</span>
                         <span v-if="invoice.due_date" class="text-gray-500">Валута:</span>
-                        <span v-if="invoice.due_date" class="font-medium">{{ invoice.due_date }}</span>
+                        <span v-if="invoice.due_date" class="font-medium">{{ formatDate(invoice.due_date) }}</span>
                     </div>
                 </div>
             </div>
@@ -172,7 +173,7 @@ function printPage() { window.print(); }
             <div class="mt-12 flex items-end justify-between border-t pt-6 text-xs text-gray-400">
                 <div>
                     <p>Составил: {{ invoice.creator.name }}</p>
-                    <p>Датум на издавање: {{ invoice.date }}</p>
+                    <p>Датум на издавање: {{ formatDate(invoice.date) }}</p>
                 </div>
                 <div class="text-right">
                     <p>{{ invoice.company.name }}</p>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeft, Printer, Send, BookCheck, AlertTriangle } from '@lucide/vue';
+import { formatDate } from '@/lib/formatDate';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ref } from 'vue';
@@ -87,10 +88,7 @@ function fmtQty(v: string) {
     return parseFloat(v).toLocaleString('mk-MK', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
 }
 
-function formatDate(d: string | null): string {
-    if (!d) return '';
-    const [y, m, day] = d.split('-');
-    return `${day}.${m}.${y}`;
+.${m}.${y}`;
 }
 
 const cur = props.invoice.currency ?? 'MKD';

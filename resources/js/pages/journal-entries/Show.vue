@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { formatDate } from '@/lib/formatDate';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,8 +28,7 @@ function fmt(val: string | number): string {
     return n.toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function fmtDate(iso: string): string {
-    return new Date(iso).toLocaleDateString('mk-MK', { day: '2-digit', month: 'long', year: 'numeric' });
+);
 }
 
 const totalDebit  = props.entry.lines?.reduce((s, l) => s + Number(l.debit  || 0), 0) ?? 0;
@@ -47,7 +47,7 @@ const totalCredit = props.entry.lines?.reduce((s, l) => s + Number(l.credit || 0
                     <div>
                         <CardTitle class="text-base">{{ entry.description }}</CardTitle>
                         <p class="mt-1 text-sm text-muted-foreground">
-                            {{ fmtDate(entry.entry_date) }}
+                            {{ formatDate(entry.entry_date) }}
                             <span v-if="entry.reference"> · {{ entry.reference }}</span>
                         </p>
                     </div>

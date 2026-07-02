@@ -2,6 +2,7 @@
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { Plus, Search, X, Eye, Trash2, FileText, RefreshCw } from '@lucide/vue';
 import { ref, computed, watch } from 'vue';
+import { formatDate } from '@/lib/formatDate';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -264,7 +265,7 @@ function deleteInvoice(inv: Invoice) {
                     </tr>
                     <tr v-for="inv in invoices.data" :key="inv.id" class="border-b last:border-0 hover:bg-muted/30">
                         <td class="px-3 py-1.5 font-mono font-medium">{{ inv.invoice_number }}</td>
-                        <td class="px-3 py-1.5 text-muted-foreground">{{ inv.date }}</td>
+                        <td class="px-3 py-1.5 text-muted-foreground">{{ formatDate(inv.date) }}</td>
                         <td class="px-3 py-1.5">{{ inv.kontragent?.name ?? inv.client_name ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-right font-mono font-semibold">
                             {{ fmt(inv.total_amount) }}
