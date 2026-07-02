@@ -140,7 +140,7 @@ function doDelete() {
     </div>
 
     <Dialog :open="!!deleteTarget" @update:open="(v) => { if (!v) deleteTarget = null }">
-        <DialogContent>
+        <DialogContent class="max-w-lg">
             <DialogHeader>
                 <DialogTitle>Избриши корисник</DialogTitle>
                 <DialogDescription>

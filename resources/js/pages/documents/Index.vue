@@ -222,7 +222,7 @@ function formatSize(bytes: number): string {
     </div>
 
     <Dialog :open="!!deleteTarget" @update:open="(v) => { if (!v) deleteTarget = null }">
-        <DialogContent>
+        <DialogContent class="max-w-lg">
             <DialogHeader>
                 <DialogTitle>Избриши документ</DialogTitle>
                 <DialogDescription>
