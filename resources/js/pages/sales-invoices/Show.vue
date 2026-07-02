@@ -88,9 +88,6 @@ function fmtQty(v: string) {
     return parseFloat(v).toLocaleString('mk-MK', { minimumFractionDigits: 0, maximumFractionDigits: 3 });
 }
 
-.${m}.${y}`;
-}
-
 const cur = props.invoice.currency ?? 'MKD';
 
 function printPage() { window.print(); }

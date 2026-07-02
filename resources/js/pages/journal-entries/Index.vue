@@ -37,8 +37,6 @@ defineProps<{ entries: Paginated }>();
 const STATUS_LABEL: Record<string, string> = { draft: 'Нацрт', posted: 'Прокнижено' };
 const STATUS_VARIANT: Record<string, 'outline' | 'secondary'> = { draft: 'outline', posted: 'secondary' };
 
-.${m}.${y}`;
-}
 </script>
 
 <template>

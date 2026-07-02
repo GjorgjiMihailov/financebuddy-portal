@@ -28,8 +28,6 @@ function fmt(val: string | number): string {
     return n.toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-);
-}
 
 const totalDebit  = props.entry.lines?.reduce((s, l) => s + Number(l.debit  || 0), 0) ?? 0;
 const totalCredit = props.entry.lines?.reduce((s, l) => s + Number(l.credit || 0), 0) ?? 0;
