@@ -43,8 +43,22 @@ const totalCredit = props.entry.lines?.reduce((s, l) => s + Number(l.credit || 0
             <CardHeader>
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <CardTitle class="text-base">{{ entry.description }}</CardTitle>
-                        <p class="mt-1 text-sm text-muted-foreground">
+                        <div class="flex items-center gap-3">
+                            <span
+                                v-if="entry.group_code !== null && entry.sequence_number !== null"
+                                class="rounded-md bg-primary/10 px-2.5 py-1 font-mono text-lg font-bold text-primary"
+                            >
+                                {{ entry.group_code }}-{{ String(entry.sequence_number).padStart(4, '0') }}
+                            </span>
+                            <div>
+                                <CardTitle class="text-base">{{ entry.description }}</CardTitle>
+                                <p class="mt-0.5 text-xs text-muted-foreground">
+                                    {{ entry.journal_group?.name ?? '' }}
+                                    <span v-if="entry.journal_group && entry.year"> · {{ entry.year }}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-sm text-muted-foreground">
                             {{ formatDate(entry.entry_date) }}
                             <span v-if="entry.reference"> · {{ entry.reference }}</span>
                         </p>

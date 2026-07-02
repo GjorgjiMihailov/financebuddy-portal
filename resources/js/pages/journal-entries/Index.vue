@@ -4,6 +4,7 @@ import { formatDate } from '@/lib/formatDate';
 import { Eye, FileText } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import type { JournalGroup } from '@/types';
 
 defineOptions({
     layout: {
@@ -17,11 +18,15 @@ defineOptions({
 type Entry = {
     id: number;
     entry_date: string;
+    group_code: number | null;
+    year: number | null;
+    sequence_number: number | null;
     reference: string | null;
     description: string | null;
     status: 'draft' | 'posted';
     document: { id: number; original_filename: string } | null;
     creator: { id: number; name: string };
+    journal_group: JournalGroup | null;
 };
 
 type Paginated = {
@@ -37,6 +42,10 @@ defineProps<{ entries: Paginated }>();
 const STATUS_LABEL: Record<string, string> = { draft: 'Нацрт', posted: 'Прокнижено' };
 const STATUS_VARIANT: Record<string, 'outline' | 'secondary'> = { draft: 'outline', posted: 'secondary' };
 
+function voucherNumber(e: Entry): string {
+    if (e.group_code === null || e.sequence_number === null) return '—';
+    return `${e.group_code}-${String(e.sequence_number).padStart(4, '0')}`;
+}
 </script>
 
 <template>
@@ -55,8 +64,9 @@ const STATUS_VARIANT: Record<string, 'outline' | 'secondary'> = { draft: 'outlin
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Налог</th>
+                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Група</th>
                         <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Датум</th>
-                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Референца</th>
                         <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Опис</th>
                         <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Документ</th>
                         <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Статус</th>
@@ -66,7 +76,7 @@ const STATUS_VARIANT: Record<string, 'outline' | 'secondary'> = { draft: 'outlin
                 </thead>
                 <tbody>
                     <tr v-if="entries.data.length === 0">
-                        <td colspan="7" class="py-16 text-center text-muted-foreground">
+                        <td colspan="8" class="py-16 text-center text-muted-foreground">
                             <FileText class="mx-auto mb-3 size-10 opacity-30" />
                             Нема книжења
                         </td>
@@ -76,8 +86,13 @@ const STATUS_VARIANT: Record<string, 'outline' | 'secondary'> = { draft: 'outlin
                         :key="e.id"
                         class="border-b last:border-0 hover:bg-muted/30"
                     >
+                        <td class="px-3 py-1.5 font-mono text-xs font-semibold text-primary">
+                            {{ voucherNumber(e) }}
+                        </td>
+                        <td class="px-3 py-1.5 text-xs text-muted-foreground">
+                            {{ e.journal_group?.name ?? '—' }}
+                        </td>
                         <td class="px-3 py-1.5 font-mono text-xs">{{ formatDate(e.entry_date) }}</td>
-                        <td class="px-3 py-1.5 font-mono text-xs text-muted-foreground">{{ e.reference ?? '—' }}</td>
                         <td class="px-3 py-1.5">{{ e.description ?? '—' }}</td>
                         <td class="px-3 py-1.5 text-xs text-muted-foreground">
                             {{ e.document?.original_filename ?? '—' }}

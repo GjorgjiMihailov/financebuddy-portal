@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\JournalGroupController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 /* @chisel-password-confirmation */
@@ -21,6 +22,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/accounts', [\App\Http\Controllers\ChartOfAccountController::class, 'index'])->name('settings.accounts.index');
     Route::post('settings/accounts', [\App\Http\Controllers\ChartOfAccountController::class, 'store'])->name('settings.accounts.store');
     Route::put('settings/accounts/{account}', [\App\Http\Controllers\ChartOfAccountController::class, 'update'])->name('settings.accounts.update');
+
+    // ── Journal Groups ────────────────────────────────────────────────────────
+    Route::get('settings/journal-groups', [JournalGroupController::class, 'index'])->name('settings.journal-groups.index');
+    Route::post('settings/journal-groups', [JournalGroupController::class, 'store'])->name('settings.journal-groups.store');
+    Route::delete('settings/journal-groups/{journalGroup}', [JournalGroupController::class, 'destroy'])->name('settings.journal-groups.destroy');
 
     Route::get('settings/security', [SecurityController::class, 'edit'])
         /* @chisel-password-confirmation */

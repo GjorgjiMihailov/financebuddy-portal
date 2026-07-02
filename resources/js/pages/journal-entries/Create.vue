@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Plus, Trash2 } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { DocumentFile } from '@/types';
+import type { DocumentFile, JournalGroup } from '@/types';
 
 type AccountGroup = {
     [classNum: string]: { code: string; name: string; class: number }[];
@@ -28,6 +28,7 @@ const props = defineProps<{
     document: DocumentFile;
     accounts: AccountGroup;
     prefillLines: { account_code: string; description: string; debit: number; credit: number }[];
+    journalGroups: JournalGroup[];
 }>();
 
 defineOptions({
@@ -42,6 +43,7 @@ defineOptions({
 const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 0 });
 
 const form = useForm({
+    group_code:       null as number | null,
     description:      props.document.extraction?.vendor_name
         ? `Фактура — ${props.document.extraction.vendor_name}`
         : '',
@@ -52,6 +54,23 @@ const form = useForm({
         ? props.prefillLines.map(l => ({ ...l }))
         : [emptyLine(), emptyLine()],
 });
+
+const nextVoucherPreview = ref<string | null>(null);
+
+async function loadNextVoucher() {
+    if (form.group_code === null || !form.entry_date) {
+        nextVoucherPreview.value = null;
+        return;
+    }
+    const year = new Date(form.entry_date).getFullYear();
+    const res = await fetch(`/api/journal-groups/next-sequence?group_code=${form.group_code}&year=${year}&company_id=${props.document.company_id}`);
+    if (res.ok) {
+        const data = await res.json();
+        nextVoucherPreview.value = data.voucher_number;
+    }
+}
+
+watch(() => [form.group_code, form.entry_date], loadNextVoucher);
 
 const totalDebit  = computed(() => form.lines.reduce((s, l) => s + Number(l.debit  || 0), 0));
 const totalCredit = computed(() => form.lines.reduce((s, l) => s + Number(l.credit || 0), 0));
@@ -125,6 +144,29 @@ function submitPost() {
                         v-model="form.reference"
                         placeholder="бр. на фактура"
                     />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="group_code">Група налог</Label>
+                    <select
+                        id="group_code"
+                        v-model="form.group_code"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                        <option :value="null">— без група —</option>
+                        <option
+                            v-for="g in journalGroups"
+                            :key="g.code"
+                            :value="g.code"
+                        >
+                            {{ g.code }} — {{ g.name }}
+                        </option>
+                    </select>
+                </div>
+                <div v-if="nextVoucherPreview" class="grid gap-2">
+                    <Label>Следен број</Label>
+                    <div class="flex h-9 items-center rounded-md border bg-muted/50 px-3 font-mono text-sm font-semibold text-primary">
+                        {{ nextVoucherPreview }}
+                    </div>
                 </div>
             </div>
 

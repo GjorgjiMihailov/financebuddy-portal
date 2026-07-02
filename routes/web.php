@@ -9,6 +9,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\JournalEntryController;
+use App\Http\Controllers\JournalGroupController;
 use App\Http\Controllers\KontragentController;
 use App\Http\Controllers\WarehouseMovementController;
 use App\Http\Controllers\PurchaseInvoiceController;
@@ -42,12 +43,16 @@ Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
     Route::get('documents/{document}/file', [DocumentController::class, 'file'])->name('documents.file');
     Route::post('documents/{document}/verify', [DocumentController::class, 'verify'])->name('documents.verify');
 
-    Route::get('journal-entries', [JournalEntryController::class, 'index'])->name('journal-entries.index');
     // ── Journal Entries ────────────────────────────────────────────────────────
+    Route::get('journal-entries', [JournalEntryController::class, 'index'])->name('journal-entries.index');
     Route::get('documents/{document}/journal-entry/create', [JournalEntryController::class, 'create'])->name('journal-entries.create');
     Route::post('documents/{document}/journal-entry', [JournalEntryController::class, 'store'])->name('journal-entries.store');
     Route::get('journal-entries/{journalEntry}', [JournalEntryController::class, 'show'])->name('journal-entries.show');
     Route::post('journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post'])->name('journal-entries.post');
+
+    // ── Journal Groups API ─────────────────────────────────────────────────────
+    Route::get('api/journal-groups', [JournalGroupController::class, 'list'])->name('journal-groups.list');
+    Route::get('api/journal-groups/next-sequence', [JournalGroupController::class, 'nextSequence'])->name('journal-groups.next-sequence');
 
     // ── Users ─────────────────────────────────────────────────────────────────
     Route::resource('users', UserController::class)->except(['show']);

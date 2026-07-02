@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Database\Seeders\ChartOfAccountsSeeder;
+use Database\Seeders\JournalGroupSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,6 +16,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesSeeder::class,
             ChartOfAccountsSeeder::class,
+            JournalGroupSeeder::class,
         ]);
     }
 }

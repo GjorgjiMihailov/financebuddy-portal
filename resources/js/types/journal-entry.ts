@@ -1,3 +1,9 @@
+export type JournalGroup = {
+    code: number;
+    name: string;
+    description?: string | null;
+};
+
 export type JournalEntryStatus = 'draft' | 'posted';
 
 export const JOURNAL_STATUS_LABELS: Record<JournalEntryStatus, string> = {
@@ -24,6 +30,9 @@ export type JournalEntry = {
     id: number;
     document_id: number | null;
     company_id: number;
+    group_code: number | null;
+    year: number | null;
+    sequence_number: number | null;
     entry_date: string;
     description: string;
     reference: string | null;
@@ -36,5 +45,6 @@ export type JournalEntry = {
     document?: { id: number; original_filename: string } | null;
     creator?: { id: number; name: string } | null;
     poster?: { id: number; name: string } | null;
+    journal_group?: JournalGroup | null;
     lines?: JournalEntryLine[];
 };
