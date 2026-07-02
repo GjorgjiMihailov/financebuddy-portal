@@ -5,7 +5,6 @@ import { ref, computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import MaterijaliTabs from '@/components/MaterijaliTabs.vue';
 
 defineOptions({
     layout: {
@@ -64,7 +63,6 @@ function formatStock(val: string | null): string {
 
 <template>
     <Head title="Артикли" />
-    <MaterijaliTabs />
 
     <div class="flex flex-col gap-6 p-6">
         <div class="flex items-center justify-between">

@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import MaterijaliTabs from '@/components/MaterijaliTabs.vue';
 import {
     Dialog,
     DialogContent,
@@ -161,7 +160,6 @@ function deleteKontragent(k: Kontragent) {
 
 <template>
     <Head title="Кооперанти" />
-    <MaterijaliTabs />
 
     <div class="flex flex-col gap-6 p-6">
 

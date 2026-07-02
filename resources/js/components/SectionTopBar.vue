@@ -34,9 +34,9 @@ const sections = computed((): Section[] => {
 
     if (isStaff.value) {
         list.push({
-            prefixes: ['/companies', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices'],
+            prefixes: ['/kontragenti', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices'],
             tabs: [
-                { title: 'Компании', href: '/companies' },
+                { title: 'Кооперанти', href: '/kontragenti' },
                 { title: 'Магацини', href: '/warehouses' },
                 { title: 'Артикли', href: '/items' },
                 { title: 'Влезни фактури', href: '/purchase-invoices' },

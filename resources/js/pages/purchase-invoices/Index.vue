@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import MaterijaliTabs from '@/components/MaterijaliTabs.vue';
 import { Link } from "@inertiajs/vue3";
 
 defineOptions({
@@ -168,7 +167,6 @@ function deleteInvoice(inv: Invoice) {
 
 <template>
     <Head title="Влезни фактури" />
-    <MaterijaliTabs />
 
     <div class="flex flex-col gap-6 p-6">
 
