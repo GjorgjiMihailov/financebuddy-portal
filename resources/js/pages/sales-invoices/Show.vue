@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeft, Printer, Send, BookCheck, AlertTriangle } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
@@ -94,6 +94,8 @@ function formatDate(d: string | null): string {
 }
 
 const cur = props.invoice.currency ?? 'MKD';
+
+function printPage() { window.print(); }
 const rate = props.invoice.exchange_rate ? parseFloat(props.invoice.exchange_rate) : null;
 </script>
 
@@ -130,7 +132,7 @@ const rate = props.invoice.exchange_rate ? parseFloat(props.invoice.exchange_rat
                     <BookCheck class="mr-2 size-4" />
                     {{ booking ? 'Книжење…' : 'Книжи' }}
                 </Button>
-                <Button variant="outline" @click="window.print()">
+                <Button variant="outline" @click="printPage">
                     <Printer class="mr-2 size-4" />Печати / PDF
                 </Button>
             </div>

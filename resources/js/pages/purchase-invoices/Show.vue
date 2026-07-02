@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Head, Link } from "@inertiajs/vue3";
 import { ArrowLeft, Printer } from "@lucide/vue";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,8 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = { dr
 function fmt(v: string | number) {
     return Number(v).toLocaleString("mk-MK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+function printPage() \{ window.print(); \}
 </script>
 
 <template>
@@ -62,7 +64,7 @@ function fmt(v: string | number) {
         </Button>
         <div class="flex items-center gap-2">
             <Badge :variant="STATUS_VARIANT[invoice.status]">{{ STATUS_LABELS[invoice.status] }}</Badge>
-            <Button @click="window.print()">
+            <Button @click="printPage">
                 <Printer class="mr-2 size-4" />Печати / PDF
             </Button>
         </div>
