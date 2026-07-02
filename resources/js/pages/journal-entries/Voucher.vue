@@ -370,12 +370,20 @@ function focusCell(row: number, col: TableCol) {
 }
 
 function handleKeydown(e: KeyboardEvent, row: number, col: TableCol) {
-    // Autocomplete navigation
+    // Autocomplete navigation (must intercept Tab too, before falling through)
     if (ac.show) {
         if (e.key === 'ArrowDown') { e.preventDefault(); ac.idx = Math.min(ac.idx + 1, ac.results.length - 1); return; }
         if (e.key === 'ArrowUp')   { e.preventDefault(); ac.idx = Math.max(ac.idx - 1, 0); return; }
         if (e.key === 'Enter')     { e.preventDefault(); if (ac.idx >= 0) selectAcResult(ac.idx); return; }
         if (e.key === 'Escape')    { e.preventDefault(); closeAc(); return; }
+        if (e.key === 'Tab' && ac.results.length > 0) {
+            // Tab with results open → auto-select highlighted or first result, then move on
+            e.preventDefault();
+            selectAcResult(ac.idx >= 0 ? ac.idx : 0);
+            return;
+        }
+        // Tab with no results → close AC and fall through to normal Tab handling
+        if (e.key === 'Tab') closeAc();
     }
 
     const colIdx = TABLE_COLS.indexOf(col);
@@ -448,6 +456,26 @@ function onAccountInput(e: Event, row: number) {
         ac.results = await res.json();
         ac.show    = ac.results.length > 0;
     }, 180);
+}
+
+async function onAccountBlur(e: FocusEvent, row: number) {
+    closeAc(200);
+    const line = lines.value[row];
+    if (!line.account_code || line.account_obj) return; // empty or already resolved
+    // Try exact-code lookup so user can type codes directly without AC selection
+    const res = await fetch(`/api/accounts/search?q=${encodeURIComponent(line.account_code)}`);
+    if (!res.ok) return;
+    const results: AccountResult[] = await res.json();
+    const exact = results.find(r => r.code === line.account_code);
+    if (exact) {
+        line.account_name = exact.name;
+        line.account_obj  = exact;
+    } else if (results.length === 1) {
+        // Single result — accept it (user typed prefix that uniquely matches)
+        line.account_code = results[0].code;
+        line.account_name = results[0].name;
+        line.account_obj  = results[0];
+    }
 }
 
 function onPartnerInput(e: Event, row: number) {
@@ -704,7 +732,7 @@ function fmtDate(d: string | null | undefined): string {
                                         @input="onAccountInput($event, i)"
                                         @keydown="e => handleKeydown(e, i, 'account')"
                                         @focus="selectedRow = i"
-                                        @blur="closeAc(200)"
+                                        @blur="onAccountBlur($event, i)"
                                         class="h-6 w-full rounded border-0 bg-transparent px-1 font-mono text-xs outline-none focus:bg-white focus:ring-1 focus:ring-primary dark:focus:bg-zinc-900"
                                         placeholder="конто"
                                     />
