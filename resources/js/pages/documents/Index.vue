@@ -13,7 +13,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { Company } from '@/types';
 import {
     DOCUMENT_STATUS_LABELS,
     DOCUMENT_STATUS_VARIANT,
@@ -31,8 +30,7 @@ defineOptions({
 
 const props = defineProps<{
     documents: PaginatedDocuments;
-    companies: Pick<Company, 'id' | 'name'>[];
-    filters: { company_id?: string; status?: string };
+    filters: { status?: string };
 }>();
 
 const page = usePage();
@@ -122,15 +120,6 @@ function formatSize(bytes: number): string {
 
         <!-- Филтри -->
         <div class="flex flex-wrap gap-3">
-            <select
-                class="rounded-md border bg-background px-3 py-1.5 text-sm"
-                :value="filters.company_id ?? ''"
-                @change="applyFilter('company_id', ($event.target as HTMLSelectElement).value)"
-            >
-                <option value="">Сите компании</option>
-                <option v-for="c in companies" :key="c.id" :value="c.id">{{ c.name }}</option>
-            </select>
-
             <select
                 class="rounded-md border bg-background px-3 py-1.5 text-sm"
                 :value="filters.status ?? ''"

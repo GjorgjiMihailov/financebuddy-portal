@@ -5,7 +5,6 @@ import { ref, computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 defineOptions({
     layout: {
@@ -34,27 +33,21 @@ type Paginated = {
 
 const props = defineProps<{
     items: Paginated;
-    companies: Company[];
-    filters: { company_id?: string; search?: string };
+    filters: { search?: string };
 }>();
 
-const companyFilter = ref(props.filters.company_id ?? '');
-const search        = ref(props.filters.search ?? '');
+const search = ref(props.filters.search ?? '');
 
 function applyFilters() {
-    router.get('/items', {
-        ...(companyFilter.value ? { company_id: companyFilter.value } : {}),
-        ...(search.value ? { search: search.value } : {}),
-    }, { replace: true });
+    router.get('/items', { ...(search.value ? { search: search.value } : {}) }, { replace: true });
 }
 
 function clearFilters() {
-    companyFilter.value = '';
     search.value = '';
     router.get('/items', {}, { replace: true });
 }
 
-const hasFilters = computed(() => companyFilter.value || search.value);
+const hasFilters = computed(() => !!search.value);
 
 function formatPrice(val: string): string {
     return Number(val).toLocaleString('mk-MK', { minimumFractionDigits: 2 });
@@ -96,16 +89,6 @@ function formatStock(val: string | null): string {
                     @keyup.enter="applyFilters"
                 />
             </div>
-
-            <Select v-model="companyFilter" @update:model-value="applyFilters">
-                <SelectTrigger class="w-64">
-                    <SelectValue placeholder="Сите компании" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="">Сите компании</SelectItem>
-                    <SelectItem v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</SelectItem>
-                </SelectContent>
-            </Select>
 
             <Button variant="outline" @click="applyFilters">
                 <Search class="mr-2 size-4" />

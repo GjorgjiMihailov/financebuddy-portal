@@ -16,17 +16,15 @@ class PurchaseInvoiceController extends Controller
     public function index(Request $request): Response
     {
         $query = PurchaseInvoice::with('company:id,name', 'kontragent:id,name', 'creator:id,name')
-            ->when($request->company_id, fn ($q, $id) => $q->where('company_id', $id))
+            ->where('company_id', $this->currentCompanyId($request))
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->latest('date');
 
-        $invoices  = $query->paginate(20)->withQueryString();
-        $companies = Company::orderBy('name')->get(['id', 'name']);
+        $invoices = $query->paginate(20)->withQueryString();
 
         return Inertia::render('purchase-invoices/Index', [
-            'invoices'  => $invoices,
-            'companies' => $companies,
-            'filters'   => $request->only(['company_id', 'status']),
+            'invoices' => $invoices,
+            'filters'  => $request->only(['status']),
         ]);
     }
 

@@ -24,31 +24,34 @@ class ItemController extends Controller
                 ELSE 0 END), 0)
             FROM warehouse_movements WHERE item_id = items.id) as current_stock";
 
+        $companyId = $this->currentCompanyId($request);
+
         $query = Item::with('company:id,name')
-            ->when($request->company_id, fn ($q, $id) => $q->where('company_id', $id))
+            ->where('company_id', $companyId)
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('code', 'like', "%{$s}%")->orWhere('name', 'like', "%{$s}%");
             }))
             ->selectRaw("items.*, {$stockSub}")
             ->orderBy('code');
 
-        $items     = $query->paginate(20)->withQueryString();
-        $companies = Company::orderBy('name')->get(['id', 'name']);
+        $items = $query->paginate(20)->withQueryString();
 
         return Inertia::render('items/Index', [
-            'items'     => $items,
-            'companies' => $companies,
-            'filters'   => $request->only(['company_id', 'search']),
+            'items'   => $items,
+            'filters' => $request->only(['search']),
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        $companies  = Company::orderBy('name')->get(['id', 'name']);
-        $warehouses = Warehouse::where('is_active', true)->orderBy('name')->get(['id', 'company_id', 'name']);
+        $companyId  = $this->currentCompanyId($request);
+        $warehouses = Warehouse::where('company_id', $companyId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'company_id', 'name']);
 
         return Inertia::render('items/Create', [
-            'companies'  => $companies,
+            'companies'  => Company::where('id', $companyId)->get(['id', 'name']),
             'warehouses' => $warehouses,
         ]);
     }

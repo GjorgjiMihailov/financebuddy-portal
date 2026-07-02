@@ -14,14 +14,8 @@ class KontragentController extends Controller
 {
     public function index(Request $request): Response
     {
-        $user = $request->user();
-
         $query = Kontragent::with('company:id,name')
-            ->when(
-                $user->hasRole('company_admin'),
-                fn ($q) => $q->whereHas('company.users', fn ($u) => $u->where('users.id', $user->id))
-            )
-            ->when($request->company_id, fn ($q, $id) => $q->where('company_id', $id))
+            ->where('company_id', $this->currentCompanyId($request))
             ->when($request->type, fn ($q, $t) => $q->where('type', $t))
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
                 $q->where('name', 'like', "%{$s}%")->orWhere('edb', 'like', "%{$s}%");
@@ -29,12 +23,10 @@ class KontragentController extends Controller
             ->orderBy('name');
 
         $kontragenti = $query->paginate(20)->withQueryString();
-        $companies   = Company::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('kontragenti/Index', [
             'kontragenti' => $kontragenti,
-            'companies'   => $companies,
-            'filters'     => $request->only(['company_id', 'type', 'search']),
+            'filters'     => $request->only(['type', 'search']),
         ]);
     }
 

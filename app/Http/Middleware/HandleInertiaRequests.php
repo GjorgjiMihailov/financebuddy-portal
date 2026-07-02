@@ -45,7 +45,20 @@ class HandleInertiaRequests extends Middleware
                     ])
                     : null,
             ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sidebarOpen'     => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'current_company' => function () {
+                if (! auth()->check()) {
+                    return null;
+                }
+                if ($id = session('current_company_id')) {
+                    return \App\Models\Company::find($id, ['id', 'name']);
+                }
+                $user = auth()->user();
+                if ($user->hasRole('company_admin')) {
+                    return $user->companies()->first(['companies.id', 'companies.name']);
+                }
+                return null;
+            },
         ];
     }
 }

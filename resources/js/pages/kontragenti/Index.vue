@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { Plus, Search, Pencil, Trash2, X, Building2 } from '@lucide/vue';
 import { ref, computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
@@ -50,9 +50,11 @@ type PaginatedKontragenti = {
 
 const props = defineProps<{
     kontragenti: PaginatedKontragenti;
-    companies: { id: number; name: string }[];
-    filters: { company_id?: string; type?: string; search?: string };
+    filters: { type?: string; search?: string };
 }>();
+
+const page = usePage();
+const currentCompany = computed(() => (page.props as any).current_company as { id: number; name: string } | null);
 
 const TYPE_LABELS: Record<string, string> = {
     client:   'Клиент',
@@ -67,32 +69,29 @@ const TYPE_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
 };
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
-const search      = ref(props.filters.search ?? '');
-const typeFilter  = ref(props.filters.type ?? '');
-const companyFilter = ref(props.filters.company_id ?? '');
+const search     = ref(props.filters.search ?? '');
+const typeFilter = ref(props.filters.type ?? '');
 
 function applyFilters() {
     router.get('/kontragenti', {
         ...(search.value ? { search: search.value } : {}),
         ...(typeFilter.value ? { type: typeFilter.value } : {}),
-        ...(companyFilter.value ? { company_id: companyFilter.value } : {}),
     }, { preserveState: true, replace: true });
 }
 
 function clearFilters() {
     search.value = '';
     typeFilter.value = '';
-    companyFilter.value = '';
     router.get('/kontragenti', {}, { preserveState: true, replace: true });
 }
 
-const hasFilters = computed(() => search.value || typeFilter.value || companyFilter.value);
+const hasFilters = computed(() => search.value || typeFilter.value);
 
 // ─── Create dialog ───────────────────────────────────────────────────────────
 const showCreate = ref(false);
 
 const createForm = useForm({
-    company_id:   '',
+    company_id:   String(currentCompany.value?.id ?? ''),
     name:         '',
     edb:          '',
     embs:         '',
@@ -105,10 +104,12 @@ const createForm = useForm({
 });
 
 function submitCreate() {
+    createForm.company_id = String(currentCompany.value?.id ?? '');
     createForm.post('/kontragenti', {
         onSuccess: () => {
             showCreate.value = false;
             createForm.reset();
+            createForm.company_id = String(currentCompany.value?.id ?? '');
         },
     });
 }
@@ -203,18 +204,6 @@ function deleteKontragent(k: Kontragent) {
                 </SelectContent>
             </Select>
 
-            <Select v-if="companies.length > 1" v-model="companyFilter" @update:model-value="applyFilters">
-                <SelectTrigger class="w-52">
-                    <SelectValue placeholder="Сите компании" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="">Сите компании</SelectItem>
-                    <SelectItem v-for="c in companies" :key="c.id" :value="String(c.id)">
-                        {{ c.name }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
-
             <Button variant="outline" @click="applyFilters">
                 <Search class="mr-2 size-4" />
                 Пребарај
@@ -306,21 +295,6 @@ function deleteKontragent(k: Kontragent) {
             </DialogHeader>
 
             <form class="grid gap-4 py-2" @submit.prevent="submitCreate">
-                <div class="grid gap-1.5">
-                    <Label for="c-company">Компанија *</Label>
-                    <Select v-model="createForm.company_id">
-                        <SelectTrigger id="c-company">
-                            <SelectValue placeholder="Избери компанија" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem v-for="c in companies" :key="c.id" :value="String(c.id)">
-                                {{ c.name }}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <p v-if="createForm.errors.company_id" class="text-xs text-destructive">{{ createForm.errors.company_id }}</p>
-                </div>
-
                 <div class="grid gap-1.5">
                     <Label for="c-name">Назив *</Label>
                     <Input id="c-name" v-model="createForm.name" placeholder="Назив на контрагентот" />

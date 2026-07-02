@@ -22,6 +22,8 @@ class DashboardController extends Controller
 
         if ($isCompanyAdmin) {
             $base->whereIn('company_id', $user->companies()->pluck('companies.id'));
+        } elseif (session('current_company_id')) {
+            $base->where('company_id', session('current_company_id'));
         }
 
         $stats = [

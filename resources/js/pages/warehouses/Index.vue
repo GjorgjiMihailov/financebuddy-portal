@@ -4,7 +4,6 @@ import { Plus, Pencil, Trash2, Package } from '@lucide/vue';
 import { ref } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,15 +21,8 @@ type Paginated = { data: Warehouse[]; total: number; last_page: number; links: {
 
 const props = defineProps<{
     warehouses: Paginated;
-    companies: Company[];
-    filters: { company_id?: string; search?: string };
+    filters: Record<string, never>;
 }>();
-
-const companyFilter = ref(props.filters.company_id ?? '');
-
-function applyFilter() {
-    router.get('/warehouses', companyFilter.value ? { company_id: companyFilter.value } : {}, { replace: true });
-}
 
 // ── Edit inline dialog ────────────────────────────────────────────────────────
 const showEdit = ref(false);
@@ -71,18 +63,6 @@ function deleteWarehouse(w: Warehouse) {
                     Нов магацин
                 </Link>
             </Button>
-        </div>
-
-        <div class="flex gap-3">
-            <Select v-model="companyFilter" @update:model-value="applyFilter">
-                <SelectTrigger class="w-64">
-                    <SelectValue placeholder="Сите компании" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="">Сите компании</SelectItem>
-                    <SelectItem v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</SelectItem>
-                </SelectContent>
-            </Select>
         </div>
 
         <div class="rounded-lg border">

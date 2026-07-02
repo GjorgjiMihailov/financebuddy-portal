@@ -17,26 +17,24 @@ class WarehouseController extends Controller
     public function index(Request $request): Response
     {
         $query = Warehouse::with('company:id,name')
-            ->when($request->company_id, fn ($q, $id) => $q->where('company_id', $id))
+            ->where('company_id', $this->currentCompanyId($request))
             ->when($request->search, fn ($q, $s) => $q->where('name', 'like', "%{$s}%"))
             ->latest();
 
         $warehouses = $query->paginate(20)->withQueryString();
-        $companies  = Company::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('warehouses/Index', [
             'warehouses' => $warehouses,
-            'companies'  => $companies,
-            'filters'    => $request->only(['company_id', 'search']),
+            'filters'    => $request->only(['search']),
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        $companies = Company::orderBy('name')->get(['id', 'name']);
+        $companyId = $this->currentCompanyId($request);
 
         return Inertia::render('warehouses/Create', [
-            'companies' => $companies,
+            'companies' => Company::where('id', $companyId)->get(['id', 'name']),
         ]);
     }
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChartOfAccountController;
+use App\Http\Controllers\CompanyContextController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
@@ -17,7 +18,15 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
+// ── Избор на обврзник — без company.selected (иначе бесконечен redirect) ────
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('select-company', [CompanyContextController::class, 'select'])->name('company.select');
+    Route::post('select-company', [CompanyContextController::class, 'store'])->name('company.store');
+    Route::post('clear-company', [CompanyContextController::class, 'clear'])->name('company.clear');
+});
+
+// ── Сите останати рути — со company.selected middleware ──────────────────────
+Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // ── Companies ─────────────────────────────────────────────────────────────

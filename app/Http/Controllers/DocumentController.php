@@ -26,29 +26,17 @@ class DocumentController extends Controller
     {
         $this->authorize('viewAny', Document::class);
 
-        $user  = $request->user();
-        $query = Document::with(['company:id,name', 'uploader:id,name'])->latest();
-
-        if ($user->hasRole('company_admin')) {
-            $query->whereIn('company_id', $user->companies()->pluck('companies.id'));
-        }
-
-        if ($request->company_id) {
-            $query->where('company_id', $request->company_id);
-        }
+        $query = Document::with(['company:id,name', 'uploader:id,name'])
+            ->where('company_id', $this->currentCompanyId($request))
+            ->latest();
 
         if ($request->status) {
             $query->where('status', $request->status);
         }
 
-        $companies = $user->hasRole('company_admin')
-            ? $user->companies()->orderBy('name')->get(['companies.id', 'companies.name'])
-            : Company::orderBy('name')->get(['id', 'name']);
-
         return Inertia::render('documents/Index', [
             'documents' => $query->paginate(20)->withQueryString(),
-            'companies' => $companies,
-            'filters'   => $request->only(['company_id', 'status']),
+            'filters'   => $request->only(['status']),
         ]);
     }
 
@@ -56,14 +44,11 @@ class DocumentController extends Controller
     {
         $this->authorize('create', Document::class);
 
-        $user      = $request->user();
-        $companies = $user->hasRole('company_admin')
-            ? $user->companies()->orderBy('name')->get(['companies.id', 'companies.name'])
-            : Company::orderBy('name')->get(['id', 'name']);
+        $companyId = $this->currentCompanyId($request);
 
         return Inertia::render('documents/Create', [
-            'companies'         => $companies,
-            'selectedCompanyId' => $request->integer('company_id') ?: null,
+            'companies'         => Company::where('id', $companyId)->get(['id', 'name']),
+            'selectedCompanyId' => $companyId,
         ]);
     }
 

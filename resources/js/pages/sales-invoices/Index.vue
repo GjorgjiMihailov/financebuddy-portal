@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { Plus, Search, X, Eye, Trash2, FileText } from '@lucide/vue';
 import { ref, computed, watch } from 'vue';
 import { Badge } from '@/components/ui/badge';
@@ -61,10 +61,12 @@ type Paginated = {
 };
 
 const props = defineProps<{
-    invoices:   Paginated;
-    companies:  Company[];
-    filters:    { company_id?: string; status?: string };
+    invoices: Paginated;
+    filters:  { status?: string };
 }>();
+
+const page = usePage();
+const currentCompanyId = computed(() => String((page.props as any).current_company?.id ?? ''));
 
 const STATUS_LABELS: Record<string, string> = {
     draft:  'Нацрт',
@@ -78,17 +80,15 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
 };
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
-const companyFilter = ref(props.filters.company_id ?? '');
-const statusFilter  = ref(props.filters.status ?? '');
+const statusFilter = ref(props.filters.status ?? '');
 
 function applyFilters() {
     router.get('/sales-invoices', {
-        ...(companyFilter.value ? { company_id: companyFilter.value } : {}),
         ...(statusFilter.value ? { status: statusFilter.value } : {}),
     }, { preserveState: true, replace: true });
 }
 
-const hasFilters = computed(() => companyFilter.value || statusFilter.value);
+const hasFilters = computed(() => !!statusFilter.value);
 
 // ─── Create Dialog ────────────────────────────────────────────────────────────
 const showCreate    = ref(false);
@@ -181,6 +181,7 @@ const totals = computed(() => {
 
 function openCreate() {
     createForm.reset();
+    createForm.company_id = currentCompanyId.value;
     createForm.date = new Date().toISOString().split('T')[0];
     createForm.status = 'draft';
     kontragenti.value = [];
@@ -226,14 +227,6 @@ function deleteInvoice(inv: Invoice) {
 
         <!-- Filters -->
         <div class="flex flex-wrap items-end gap-3">
-            <Select v-model="companyFilter" @update:model-value="applyFilters">
-                <SelectTrigger class="w-56"><SelectValue placeholder="Сите компании" /></SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="">Сите компании</SelectItem>
-                    <SelectItem v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</SelectItem>
-                </SelectContent>
-            </Select>
-
             <Select v-model="statusFilter" @update:model-value="applyFilters">
                 <SelectTrigger class="w-40"><SelectValue placeholder="Сите статуси" /></SelectTrigger>
                 <SelectContent>
@@ -244,7 +237,7 @@ function deleteInvoice(inv: Invoice) {
                 </SelectContent>
             </Select>
 
-            <Button v-if="hasFilters" variant="ghost" size="icon" @click="companyFilter=''; statusFilter=''; applyFilters()">
+            <Button v-if="hasFilters" variant="ghost" size="icon" @click="statusFilter=''; applyFilters()">
                 <X class="size-4" />
             </Button>
         </div>
@@ -327,35 +320,20 @@ function deleteInvoice(inv: Invoice) {
 
             <div class="grid gap-5 py-2">
 
-                <!-- Row 1: Компанија + Клиент -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="grid gap-1.5">
-                        <Label>Компанија *</Label>
-                        <Select v-model="createForm.company_id">
-                            <SelectTrigger>
-                                <SelectValue placeholder="Избери компанија" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem v-for="c in companies" :key="c.id" :value="String(c.id)">{{ c.name }}</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <p v-if="createForm.errors.company_id" class="text-xs text-destructive">{{ createForm.errors.company_id }}</p>
-                    </div>
-
-                    <div class="grid gap-1.5">
-                        <Label>Клиент</Label>
-                        <Select v-model="createForm.kontragent_id" :disabled="!createForm.company_id || loadingKontragenti">
-                            <SelectTrigger>
-                                <SelectValue :placeholder="loadingKontragenti ? 'Вчитување…' : 'Избери клиент'" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="">— Без контрагент —</SelectItem>
-                                <SelectItem v-for="k in kontragenti" :key="k.id" :value="String(k.id)">
-                                    {{ k.name }} ({{ k.edb }})
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                <!-- Row 1: Клиент -->
+                <div class="grid gap-1.5">
+                    <Label>Клиент</Label>
+                    <Select v-model="createForm.kontragent_id" :disabled="loadingKontragenti">
+                        <SelectTrigger>
+                            <SelectValue :placeholder="loadingKontragenti ? 'Вчитување…' : 'Избери клиент'" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">— Без контрагент —</SelectItem>
+                            <SelectItem v-for="k in kontragenti" :key="k.id" :value="String(k.id)">
+                                {{ k.name }} ({{ k.edb }})
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <!-- Row 2: Број + Датуми -->
@@ -380,14 +358,14 @@ function deleteInvoice(inv: Invoice) {
                 <div>
                     <div class="mb-2 flex items-center justify-between">
                         <Label class="text-base font-semibold">Ставки</Label>
-                        <Button type="button" variant="outline" size="sm" @click="addLine" :disabled="!createForm.company_id">
+                        <Button type="button" variant="outline" size="sm" @click="addLine">
                             <Plus class="mr-1.5 size-3.5" />
                             Додај ставка
                         </Button>
                     </div>
 
                     <p v-if="createForm.lines.length === 0" class="py-6 text-center text-sm text-muted-foreground">
-                        Прво избери компанија, потоа додај ставки.
+                        Притисни „Додај ставка" за да почнеш.
                     </p>
 
                     <div v-else class="rounded-lg border">
