@@ -51,7 +51,7 @@ function fmt(v: string | number) {
     return Number(v).toLocaleString("mk-MK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function printPage() \{ window.print(); \}
+function printPage() { window.print(); }
 </script>
 
 <template>
