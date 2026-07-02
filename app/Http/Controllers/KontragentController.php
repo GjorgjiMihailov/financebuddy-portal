@@ -82,6 +82,25 @@ class KontragentController extends Controller
         return back();
     }
 
+    public function searchApi(Request $request): JsonResponse
+    {
+        $companyId = $this->currentCompanyId($request);
+        $q         = (string) $request->query('q', '');
+
+        $kontragenti = Kontragent::where('company_id', $companyId)
+            ->where('is_active', true)
+            ->where(function ($query) use ($q) {
+                $query->where('name', 'like', "%{$q}%")
+                      ->orWhere('edb', 'like', "{$q}%")
+                      ->orWhere('embs', 'like', "{$q}%");
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'edb', 'embs', 'address', 'phone', 'email']);
+
+        return response()->json($kontragenti);
+    }
+
     public function forCompany(Request $request, Company $company): JsonResponse
     {
         $type = $request->query('type');

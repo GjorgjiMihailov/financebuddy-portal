@@ -11,9 +11,12 @@ class JournalEntryLine extends Model
         'journal_entry_id',
         'sort_order',
         'account_code',
+        'kontragent_id',
+        'line_date',
         'debit',
         'credit',
         'description',
+        'closing_reference',
     ];
 
     protected function casts(): array
@@ -32,5 +35,10 @@ class JournalEntryLine extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'account_code', 'code');
+    }
+
+    public function kontragent(): BelongsTo
+    {
+        return $this->belongsTo(Kontragent::class);
     }
 }

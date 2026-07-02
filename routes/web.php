@@ -10,6 +10,7 @@ use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\JournalGroupController;
+use App\Http\Controllers\JournalVoucherController;
 use App\Http\Controllers\KontragentController;
 use App\Http\Controllers\WarehouseMovementController;
 use App\Http\Controllers\PurchaseInvoiceController;
@@ -45,14 +46,26 @@ Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
 
     // ── Journal Entries ────────────────────────────────────────────────────────
     Route::get('journal-entries', [JournalEntryController::class, 'index'])->name('journal-entries.index');
+    Route::get('journal-entries/voucher', [JournalVoucherController::class, 'index'])->name('journal-entries.voucher');
     Route::get('documents/{document}/journal-entry/create', [JournalEntryController::class, 'create'])->name('journal-entries.create');
     Route::post('documents/{document}/journal-entry', [JournalEntryController::class, 'store'])->name('journal-entries.store');
     Route::get('journal-entries/{journalEntry}', [JournalEntryController::class, 'show'])->name('journal-entries.show');
     Route::post('journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post'])->name('journal-entries.post');
 
+    // ── Journal Voucher API (navigate before {model} to avoid route collision) ─
+    Route::get('api/voucher/navigate', [JournalVoucherController::class, 'navigate'])->name('voucher.navigate');
+    Route::get('api/voucher/open-invoices', [JournalVoucherController::class, 'openInvoices'])->name('voucher.open-invoices');
+    Route::post('api/voucher', [JournalVoucherController::class, 'save'])->name('voucher.save');
+    Route::put('api/voucher/{journalEntry}', [JournalVoucherController::class, 'update'])->name('voucher.update');
+    Route::delete('api/voucher/{journalEntry}', [JournalVoucherController::class, 'destroy'])->name('voucher.destroy');
+
     // ── Journal Groups API ─────────────────────────────────────────────────────
     Route::get('api/journal-groups', [JournalGroupController::class, 'list'])->name('journal-groups.list');
     Route::get('api/journal-groups/next-sequence', [JournalGroupController::class, 'nextSequence'])->name('journal-groups.next-sequence');
+
+    // ── Account / Partner search ───────────────────────────────────────────────
+    Route::get('api/accounts/search', [ChartOfAccountController::class, 'search'])->name('accounts.search');
+    Route::get('api/partners/search', [KontragentController::class, 'searchApi'])->name('partners.search');
 
     // ── Users ─────────────────────────────────────────────────────────────────
     Route::resource('users', UserController::class)->except(['show']);

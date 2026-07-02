@@ -4,7 +4,7 @@ import { computed } from 'vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 
 const page = usePage();
-const { isCurrentOrParentUrl } = useCurrentUrl();
+const { isCurrentOrParentUrl, isCurrentUrl } = useCurrentUrl();
 
 const roles = computed(() => (page.props.auth as any)?.user?.roles ?? []);
 const isAdmin = computed(() => roles.value.includes('admin'));
@@ -12,8 +12,12 @@ const isAccountant = computed(() => roles.value.includes('accountant'));
 const isCompanyAdmin = computed(() => roles.value.includes('company_admin'));
 const isStaff = computed(() => isAdmin.value || isAccountant.value);
 
-type Tab = { title: string; href: string };
+type Tab = { title: string; href: string; exact?: boolean };
 type Section = { prefixes: string[]; tabs: Tab[] };
+
+function isTabActive(tab: Tab): boolean {
+    return tab.exact ? isCurrentUrl(tab.href) : isCurrentOrParentUrl(tab.href);
+}
 
 const sections = computed((): Section[] => {
     const list: Section[] = [
@@ -26,7 +30,8 @@ const sections = computed((): Section[] => {
                   ]
                 : [
                     { title: 'Документи', href: '/documents' },
-                    { title: 'Книжења', href: '/journal-entries' },
+                    { title: 'Список', href: '/journal-entries', exact: true },
+                    { title: 'Внес', href: '/journal-entries/voucher' },
                     { title: 'Извештаи', href: '/reports' },
                   ],
         },
@@ -89,7 +94,7 @@ const currentTabs = computed((): Tab[] => {
             :key="tab.href"
             :href="tab.href"
             class="relative flex items-center px-3 py-3 text-sm font-medium transition-colors"
-            :class="isCurrentOrParentUrl(tab.href)
+            :class="isTabActive(tab)
                 ? 'text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-primary'
                 : 'text-muted-foreground hover:text-foreground'"
         >

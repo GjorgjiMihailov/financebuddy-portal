@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChartOfAccount;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -10,6 +11,23 @@ use Inertia\Response;
 
 class ChartOfAccountController extends Controller
 {
+    public function search(Request $request): JsonResponse
+    {
+        $q = (string) $request->query('q', '');
+
+        $accounts = ChartOfAccount::where('is_active', true)
+            ->where('allows_posting', true)
+            ->where(function ($query) use ($q) {
+                $query->where('code', 'like', "{$q}%")
+                      ->orWhere('name', 'like', "%{$q}%");
+            })
+            ->orderBy('code')
+            ->limit(20)
+            ->get(['code', 'name', 'class', 'account_type']);
+
+        return response()->json($accounts);
+    }
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', ChartOfAccount::class);

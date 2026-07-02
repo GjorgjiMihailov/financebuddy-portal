@@ -16,11 +16,25 @@ export const JOURNAL_STATUS_VARIANT: Record<JournalEntryStatus, 'outline' | 'def
     posted: 'default',
 };
 
+export type Kontragent = {
+    id: number;
+    name: string;
+    edb: string;
+    embs?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+};
+
 export type JournalEntryLine = {
     id: number;
     sort_order: number;
     account_code: string;
-    account?: { code: string; name: string } | null;
+    account?: { code: string; name: string; class?: number; account_type?: string } | null;
+    kontragent_id?: number | null;
+    kontragent?: Kontragent | null;
+    line_date?: string | null;
+    closing_reference?: string | null;
     debit: string;
     credit: string;
     description: string | null;
