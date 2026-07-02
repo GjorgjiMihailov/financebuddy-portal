@@ -15,7 +15,7 @@ withDefaults(
         items: NavItem[];
         label?: string;
     }>(),
-    { label: 'Главно' },
+    { label: '' },
 );
 
 const { isCurrentUrl } = useCurrentUrl();

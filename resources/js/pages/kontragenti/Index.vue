@@ -20,7 +20,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Материјално', href: '/kontragenti' },
-            { title: 'Контрагенти', href: '/kontragenti' },
+            { title: 'Кооперанти', href: '/kontragenti' },
         ],
     },
 });
@@ -162,14 +162,14 @@ function deleteKontragent(k: Kontragent) {
 </script>
 
 <template>
-    <Head title="Контрагенти" />
+    <Head title="Кооперанти" />
 
     <div class="flex flex-col gap-6 p-6">
 
         <!-- Header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-semibold">Контрагенти</h1>
+                <h1 class="text-2xl font-semibold">Кооперанти</h1>
                 <p class="mt-0.5 text-sm text-muted-foreground">
                     {{ kontragenti.total }} деловни партнери (клиенти / добавувачи)
                 </p>

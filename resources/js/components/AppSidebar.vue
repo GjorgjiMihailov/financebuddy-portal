@@ -3,10 +3,14 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     LayoutGrid,
     FileText,
-    BookMarked,
-    Building2,
+    Handshake,
+    Warehouse,
+    Package,
+    PackageCheck,
+    Receipt,
     Users,
     Settings2,
+    Building2,
     UserCog,
     ChevronsUpDown,
 } from '@lucide/vue';
@@ -31,9 +35,9 @@ const page = usePage();
 const { isCurrentOrParentUrl } = useCurrentUrl();
 
 const roles = computed(() => (page.props.auth as any)?.user?.roles ?? []);
-const isAdmin = computed(() => roles.value.includes('admin'));
+const isAdmin     = computed(() => roles.value.includes('admin'));
 const isAccountant = computed(() => roles.value.includes('accountant'));
-const isStaff = computed(() => isAdmin.value || isAccountant.value);
+const isStaff     = computed(() => isAdmin.value || isAccountant.value);
 
 const currentCompany = computed(() => (page.props as any).current_company as { id: number; name: string } | null);
 
@@ -41,58 +45,95 @@ function switchCompany() {
     router.post('/clear-company');
 }
 
-const mainNavItems: NavItem[] = [
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+const dashboardItems: NavItem[] = [
     { title: 'Контролна табла', href: dashboard(), icon: LayoutGrid },
 ];
 
-const sectionNavItems = computed<NavItem[]>(() => {
+// ── Финансии ──────────────────────────────────────────────────────────────────
+const financesItems: NavItem[] = [
+    {
+        title: 'Финансии',
+        href: '/documents',
+        icon: FileText,
+        isActive: ['/documents', '/journal-entries', '/reports'].some(p => isCurrentOrParentUrl(p)),
+    },
+];
+
+// ── Материјально (под-ставки) ─────────────────────────────────────────────────
+const materijalnoItems: NavItem[] = [
+    {
+        title: 'Кооперанти',
+        href: '/kontragenti',
+        icon: Handshake,
+        isActive: isCurrentOrParentUrl('/kontragenti'),
+    },
+    {
+        title: 'Магацини',
+        href: '/warehouses',
+        icon: Warehouse,
+        isActive: isCurrentOrParentUrl('/warehouses'),
+    },
+    {
+        title: 'Артикли',
+        href: '/items',
+        icon: Package,
+        isActive: isCurrentOrParentUrl('/items'),
+    },
+    {
+        title: 'Влезни фактури',
+        href: '/purchase-invoices',
+        icon: PackageCheck,
+        isActive: isCurrentOrParentUrl('/purchase-invoices'),
+    },
+    {
+        title: 'Излезни фактури',
+        href: '/sales-invoices',
+        icon: Receipt,
+        isActive: isCurrentOrParentUrl('/sales-invoices'),
+    },
+];
+
+// ── Плати и ЧР ───────────────────────────────────────────────────────────────
+const hrItems: NavItem[] = [
+    {
+        title: 'Плати и ЧР',
+        href: '/employees',
+        icon: Users,
+        isActive: ['/employees', '/payroll', '/hr'].some(p => isCurrentOrParentUrl(p)),
+    },
+];
+
+// ── Подесувања ───────────────────────────────────────────────────────────────
+const settingsItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
         {
-            title: 'Финансии',
-            href: '/documents',
-            icon: FileText,
-            isActive: ['/documents', '/journal-entries', '/reports'].some(p => isCurrentOrParentUrl(p)),
-        },
-    ];
-
-    if (isStaff.value) {
-        items.push({
-            title: 'Материјално',
-            href: '/kontragenti',
-            icon: BookMarked,
-            isActive: ['/kontragenti', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices'].some(p => isCurrentOrParentUrl(p)),
-        });
-        items.push({
-            title: 'Плати и ЧР',
-            href: '/employees',
-            icon: Users,
-            isActive: ['/employees', '/payroll', '/hr'].some(p => isCurrentOrParentUrl(p)),
-        });
-        items.push({
             title: 'Подесувања',
             href: '/settings/accounts',
             icon: Settings2,
             isActive: isCurrentOrParentUrl('/settings'),
-        });
-    }
-
+        },
+    ];
     if (isAdmin.value) {
         items.push({
-            title: 'Обврзници',
+            title: 'Компании',
             href: '/companies',
             icon: Building2,
             isActive: isCurrentOrParentUrl('/companies'),
         });
-        items.push({
-            title: 'Администрација',
-            href: '/users',
-            icon: UserCog,
-            isActive: isCurrentOrParentUrl('/users'),
-        });
     }
-
     return items;
 });
+
+// ── Администрација ────────────────────────────────────────────────────────────
+const adminItems: NavItem[] = [
+    {
+        title: 'Корисници',
+        href: '/users',
+        icon: UserCog,
+        isActive: isCurrentOrParentUrl('/users'),
+    },
+];
 </script>
 
 <template>
@@ -126,8 +167,12 @@ const sectionNavItems = computed<NavItem[]>(() => {
         </div>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
-            <NavMain :items="sectionNavItems" />
+            <NavMain :items="dashboardItems" />
+            <NavMain :items="financesItems" />
+            <NavMain v-if="isStaff" :items="materijalnoItems" label="Материјально" />
+            <NavMain v-if="isStaff" :items="hrItems" />
+            <NavMain v-if="isStaff" :items="settingsItems" label="Подесувања" />
+            <NavMain v-if="isAdmin" :items="adminItems" label="Систем" />
         </SidebarContent>
 
         <SidebarFooter>
@@ -136,4 +181,3 @@ const sectionNavItems = computed<NavItem[]>(() => {
     </Sidebar>
     <slot />
 </template>
-
