@@ -42,6 +42,7 @@ Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
     Route::get('documents/{document}/file', [DocumentController::class, 'file'])->name('documents.file');
     Route::post('documents/{document}/verify', [DocumentController::class, 'verify'])->name('documents.verify');
 
+    Route::get('journal-entries', [JournalEntryController::class, 'index'])->name('journal-entries.index');
     // ── Journal Entries ────────────────────────────────────────────────────────
     Route::get('documents/{document}/journal-entry/create', [JournalEntryController::class, 'create'])->name('journal-entries.create');
     Route::post('documents/{document}/journal-entry', [JournalEntryController::class, 'store'])->name('journal-entries.store');

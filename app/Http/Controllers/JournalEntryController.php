@@ -15,6 +15,21 @@ use Inertia\Response;
 
 class JournalEntryController extends Controller
 {
+
+    public function index(Request $request): Response
+    {
+        $companyId = $this->currentCompanyId($request);
+
+        $entries = JournalEntry::with(['document:id,original_filename', 'creator:id,name'])
+            ->where('company_id', $companyId)
+            ->orderByDesc('entry_date')
+            ->orderByDesc('id')
+            ->paginate(30);
+
+        return Inertia::render('journal-entries/Index', [
+            'entries' => $entries,
+        ]);
+    }
     public function create(Document $document): Response
     {
         $this->authorize('create', JournalEntry::class);
