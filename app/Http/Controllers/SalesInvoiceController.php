@@ -298,19 +298,63 @@ class SalesInvoiceController extends Controller
             ]);
         }
 
-        $invoice->loadMissing('kontragent');
+        $invoice->loadMissing(['kontragent', 'lines.item']);
         $partner   = $invoice->kontragent?->name ?? $invoice->client_name ?? '—';
-        $sortOrder = $entry->lines()->count();
+        $ref       = "{$invoice->invoice_number} – {$partner}";
+        $sort      = $entry->lines()->count();
 
+        // VAT amounts grouped by rate (skip 0%)
+        $vatByRate = [];
+        foreach ($invoice->lines as $line) {
+            $rate = (int) $line->vat_rate;
+            if ($rate > 0) {
+                $vatByRate[$rate] = round(($vatByRate[$rate] ?? 0) + (float) $line->vat_amount, 2);
+            }
+        }
+
+        // Detect revenue account: 620 (услуги) or 630 (стока)
+        $hasGoods    = $invoice->lines->contains(fn ($l) => $l->item && ! $l->item->is_service);
+        $hasServices = $invoice->lines->contains(fn ($l) => $l->item && $l->item->is_service);
+        if ($hasServices && ! $hasGoods) {
+            $revenueAccount = '620'; // Приходи од услуги — домашни
+        } else {
+            $revenueAccount = '630'; // Приходи од продажба на стока — домашна
+        }
+
+        // ДОЛЖИ: Побарувања од купувачи (200) = Вкупно
         $entry->lines()->create([
-            'sort_order'    => $sortOrder,
-            'account_code'  => null,
+            'sort_order'    => $sort++,
+            'account_code'  => '200',
             'kontragent_id' => $invoice->kontragent_id,
             'line_date'     => $date,
-            'description'   => "{$invoice->invoice_number} – {$partner}",
-            'debit'         => 0,
-            'credit'        => $invoice->total_amount,
+            'description'   => $ref,
+            'debit'         => (float) $invoice->total_amount,
+            'credit'        => 0,
         ]);
+
+        // ПОБАРУВА: Приходи (620/630) = Основица
+        $entry->lines()->create([
+            'sort_order'    => $sort++,
+            'account_code'  => $revenueAccount,
+            'kontragent_id' => $invoice->kontragent_id,
+            'line_date'     => $date,
+            'description'   => $ref,
+            'debit'         => 0,
+            'credit'        => (float) $invoice->subtotal,
+        ]);
+
+        // ПОБАРУВА: Обврски за ДДВ (450) по стапка
+        foreach ($vatByRate as $rate => $vatAmount) {
+            $entry->lines()->create([
+                'sort_order'    => $sort++,
+                'account_code'  => '450',
+                'kontragent_id' => $invoice->kontragent_id,
+                'line_date'     => $date,
+                'description'   => "{$ref} / ДДВ {$rate}%",
+                'debit'         => 0,
+                'credit'        => $vatAmount,
+            ]);
+        }
     }
 
     public function destroy(Request $request, SalesInvoice $salesInvoice): RedirectResponse

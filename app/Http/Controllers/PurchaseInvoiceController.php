@@ -177,18 +177,54 @@ class PurchaseInvoiceController extends Controller
             ]);
         }
 
-        $invoice->loadMissing('kontragent');
+        $invoice->loadMissing(['kontragent', 'lines']);
         $partner   = $invoice->kontragent?->name ?? $invoice->supplier_name ?? '—';
-        $sortOrder = $entry->lines()->count();
+        $ref       = "{$invoice->invoice_number} – {$partner}";
+        $sort      = $entry->lines()->count();
 
+        // VAT amounts grouped by rate (skip 0%)
+        $vatByRate = [];
+        foreach ($invoice->lines as $line) {
+            $rate = (int) $line->vat_rate;
+            if ($rate > 0) {
+                $vatByRate[$rate] = round(($vatByRate[$rate] ?? 0) + (float) $line->vat_amount, 2);
+            }
+        }
+
+        // ДОЛЖИ: Трошок (549 – Останати оперативни трошоци) = Основица
+        // Сметководителот треба да го прекнижи на точното конто
         $entry->lines()->create([
-            'sort_order'    => $sortOrder,
-            'account_code'  => null,
+            'sort_order'    => $sort++,
+            'account_code'  => '549',
             'kontragent_id' => $invoice->kontragent_id,
             'line_date'     => $date,
-            'description'   => "{$invoice->invoice_number} – {$partner}",
-            'debit'         => $invoice->total_amount,
+            'description'   => "{$ref} [Потребна проверка на сметка]",
+            'debit'         => (float) $invoice->subtotal,
             'credit'        => 0,
+        ]);
+
+        // ДОЛЖИ: Влезен ДДВ (237) по стапка
+        foreach ($vatByRate as $rate => $vatAmount) {
+            $entry->lines()->create([
+                'sort_order'    => $sort++,
+                'account_code'  => '237',
+                'kontragent_id' => $invoice->kontragent_id,
+                'line_date'     => $date,
+                'description'   => "{$ref} / ДДВ {$rate}%",
+                'debit'         => $vatAmount,
+                'credit'        => 0,
+            ]);
+        }
+
+        // ПОБАРУВА: Обврски кон добавувачи (400) = Вкупно
+        $entry->lines()->create([
+            'sort_order'    => $sort,
+            'account_code'  => '400',
+            'kontragent_id' => $invoice->kontragent_id,
+            'line_date'     => $date,
+            'description'   => $ref,
+            'debit'         => 0,
+            'credit'        => (float) $invoice->total_amount,
         ]);
     }
 
