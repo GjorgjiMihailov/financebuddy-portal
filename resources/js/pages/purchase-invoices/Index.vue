@@ -152,7 +152,7 @@ function submitCreate(status: 'draft' | 'booked' = 'draft') {
 }
 
 function bookInvoice(inv: Invoice) {
-    if (!confirm(`Книжи фактура ${inv.invoice_number} и внеси залихи?`)) return;
+    if (!confirm(`Книжи ја фактура ${inv.invoice_number}?\n\nСистемот ќе создаде книговодствен налог и автоматски ќе ги запише залихите.`)) return;
     router.post(`/purchase-invoices/${inv.id}/book`, {}, { preserveScroll: true });
 }
 
