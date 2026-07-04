@@ -239,6 +239,23 @@ class JournalEntryController extends Controller
             ->max('sequence_number') ?? 0) + 1;
     }
 
+    public function destroy(Request $request, JournalEntry $journalEntry): RedirectResponse
+    {
+        $companyId = $this->currentCompanyId($request);
+        abort_unless($journalEntry->company_id === $companyId, 403);
+
+        if ($journalEntry->status === JournalEntryStatus::Posted && ! $request->user()->hasRole('admin')) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'Прокнижен налог не може да се избрише.']);
+            return back();
+        }
+
+        $journalEntry->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Налогот е избришан.']);
+
+        return to_route('journal-entries.index');
+    }
+
     private function doPost(JournalEntry $entry, ?Document $document, int $userId): void
     {
         $entry->update([

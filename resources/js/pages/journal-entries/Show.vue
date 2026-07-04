@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { formatDate } from '@/lib/formatDate';
+import { Pencil, Trash2 } from '@lucide/vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +32,19 @@ function fmt(val: string | number): string {
 
 const totalDebit  = props.entry.lines?.reduce((s, l) => s + Number(l.debit  || 0), 0) ?? 0;
 const totalCredit = props.entry.lines?.reduce((s, l) => s + Number(l.credit || 0), 0) ?? 0;
+
+function voucherLink(): string | null {
+    const e = props.entry;
+    if (e.group_code !== null && e.sequence_number !== null && e.year !== null) {
+        return `/journal-entries/voucher?group=${e.group_code}&year=${e.year}&seq=${e.sequence_number}`;
+    }
+    return null;
+}
+
+function deleteEntry() {
+    if (!confirm(`Избриши налог ${props.entry.group_code}-${String(props.entry.sequence_number).padStart(4,'0')}?`)) return;
+    router.delete(`/journal-entries/${props.entry.id}`);
+}
 </script>
 
 <template>
@@ -63,9 +77,29 @@ const totalCredit = props.entry.lines?.reduce((s, l) => s + Number(l.credit || 0
                             <span v-if="entry.reference"> · {{ entry.reference }}</span>
                         </p>
                     </div>
-                    <Badge :variant="JOURNAL_STATUS_VARIANT[entry.status]">
-                        {{ JOURNAL_STATUS_LABELS[entry.status] }}
-                    </Badge>
+                    <div class="flex items-center gap-2">
+                        <Badge :variant="JOURNAL_STATUS_VARIANT[entry.status]">
+                            {{ JOURNAL_STATUS_LABELS[entry.status] }}
+                        </Badge>
+                        <Button
+                            v-if="voucherLink()"
+                            variant="outline"
+                            size="sm"
+                            as-child
+                        >
+                            <Link :href="voucherLink()!">
+                                <Pencil class="mr-1.5 size-3.5" />Уреди
+                            </Link>
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            class="text-destructive hover:text-destructive"
+                            @click="deleteEntry"
+                        >
+                            <Trash2 class="mr-1.5 size-3.5" />Избриши
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>

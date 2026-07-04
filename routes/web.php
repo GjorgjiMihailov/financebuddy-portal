@@ -51,6 +51,7 @@ Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
     Route::post('documents/{document}/journal-entry', [JournalEntryController::class, 'store'])->name('journal-entries.store');
     Route::get('journal-entries/{journalEntry}', [JournalEntryController::class, 'show'])->name('journal-entries.show');
     Route::post('journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post'])->name('journal-entries.post');
+    Route::delete('journal-entries/{journalEntry}', [JournalEntryController::class, 'destroy'])->name('journal-entries.destroy');
 
     // ── Journal Voucher API (navigate before {model} to avoid route collision) ─
     Route::get('api/voucher/navigate', [JournalVoucherController::class, 'navigate'])->name('voucher.navigate');

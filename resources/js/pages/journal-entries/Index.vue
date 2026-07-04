@@ -53,6 +53,13 @@ function fmt(v: string | null): string {
     if (!v) return '0,00';
     return Number(v).toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+
+function entryLink(e: Entry): string {
+    if (e.group_code !== null && e.sequence_number !== null && e.year !== null) {
+        return `/journal-entries/voucher?group=${e.group_code}&year=${e.year}&seq=${e.sequence_number}`;
+    }
+    return `/journal-entries/${e.id}`;
+}
 </script>
 
 <template>
@@ -133,7 +140,7 @@ function fmt(v: string | null): string {
                         <!-- Actions -->
                         <td class="px-3 py-2">
                             <Button variant="ghost" size="icon" as-child>
-                                <Link :href="`/journal-entries/${e.id}`">
+                                <Link :href="entryLink(e)">
                                     <Eye class="size-4" />
                                 </Link>
                             </Button>
