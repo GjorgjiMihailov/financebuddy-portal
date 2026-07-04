@@ -30,6 +30,7 @@ const props = defineProps<{
     prefillLines: { account_code: string; description: string; debit: number; credit: number }[];
     journalGroups: JournalGroup[];
     suggestedGroupCode: number | null;
+    defaultDescription: string;
 }>();
 
 defineOptions({
@@ -45,9 +46,7 @@ const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 
 
 const form = useForm({
     group_code:       props.suggestedGroupCode ?? null as number | null,
-    description:      props.document.extraction?.vendor_name
-        ? `Фактура — ${props.document.extraction.vendor_name}`
-        : '',
+    description:      props.defaultDescription || '',
     entry_date:       props.document.extraction?.document_date ?? new Date().toISOString().slice(0, 10),
     reference:        props.document.extraction?.document_number ?? '',
     sequence_number:  null as number | null,
@@ -111,11 +110,14 @@ function submitPost() {
     <div class="flex flex-col gap-6 p-6">
         <div>
             <h1 class="text-2xl font-semibold">Ново книжење</h1>
-            <p class="text-sm text-muted-foreground">
+            <p class="mt-0.5 flex items-center gap-2 text-sm text-muted-foreground">
                 {{ document.original_filename }} —
                 <Link :href="`/companies/${document.company_id}`" class="hover:underline">
                     {{ document.company?.name }}
                 </Link>
+                <span class="rounded bg-muted px-1.5 py-0.5 text-xs font-medium">
+                    {{ document.type ?? '—' }}
+                </span>
             </p>
         </div>
 

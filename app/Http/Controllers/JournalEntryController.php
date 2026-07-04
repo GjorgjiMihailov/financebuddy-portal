@@ -79,6 +79,14 @@ class JournalEntryController extends Controller
 
         [$prefillLines, $suggestedGroupCode] = $this->buildPrefillLines($document);
 
+        // Pre-fill description based on document type
+        $defaultDescription = match ($document->type) {
+            \App\Enums\DocumentType::BankStatement => 'Извод ' . ($document->extraction?->vendor_name ?? $document->original_filename),
+            \App\Enums\DocumentType::InvoiceIn     => 'Фактура — ' . ($document->extraction?->vendor_name ?? ''),
+            \App\Enums\DocumentType::InvoiceOut    => 'Фактура — ' . ($document->extraction?->vendor_name ?? ''),
+            default                                => $document->extraction?->vendor_name ?? $document->original_filename,
+        };
+
         $accounts = ChartOfAccount::where('allows_posting', true)
             ->where('is_active', true)
             ->orderBy('code')
@@ -93,6 +101,7 @@ class JournalEntryController extends Controller
             'prefillLines'       => $prefillLines,
             'journalGroups'      => $journalGroups,
             'suggestedGroupCode' => $suggestedGroupCode,
+            'defaultDescription' => $defaultDescription,
         ]);
     }
 
@@ -100,11 +109,39 @@ class JournalEntryController extends Controller
     {
         $ext = $document->extraction;
 
+        // ── Денарски / девизен извод ────────────────────────────────────────
+        if ($document->type === \App\Enums\DocumentType::BankStatement) {
+            $bankAccount = '271'; // Тековна сметка во банка (денари)
+
+            // Pair each OCR line-item with the bank account
+            $lineItems = $document->lineItems
+                ->filter(fn ($i) => $i->confirmed_account_code || $i->suggested_account_code || $i->description);
+
+            if ($lineItems->isNotEmpty()) {
+                $lines = [];
+                foreach ($lineItems as $item) {
+                    $counter = $item->confirmed_account_code ?? $item->suggested_account_code;
+                    $desc    = $item->description ?? '';
+                    $lines[] = ['account_code' => $bankAccount, 'description' => $desc, 'debit' => 0, 'credit' => 0];
+                    if ($counter) {
+                        $lines[] = ['account_code' => $counter,     'description' => $desc, 'debit' => 0, 'credit' => 0];
+                    }
+                }
+                return [$lines, 10]; // group 10 = Денарски изводи
+            }
+
+            // Fallback template
+            return [[
+                ['account_code' => $bankAccount, 'description' => 'Денарска сметка',  'debit' => 0, 'credit' => 0],
+                ['account_code' => '200',         'description' => 'Контрапартија',     'debit' => 0, 'credit' => 0],
+            ], 10];
+        }
+
+        // ── Сè друго (не фактура) → AI предлози без износ ──────────────────
         if (! $ext || ! in_array($document->type, [
             \App\Enums\DocumentType::InvoiceIn,
             \App\Enums\DocumentType::InvoiceOut,
         ])) {
-            // Non-invoice: fall back to AI line-item suggestions (no amounts)
             $lines = $document->lineItems
                 ->filter(fn ($item) => $item->confirmed_account_code || $item->suggested_account_code)
                 ->map(fn ($item) => [
