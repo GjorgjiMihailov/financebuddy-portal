@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers;
 
@@ -261,10 +261,11 @@ class SalesInvoiceController extends Controller
         }
 
         $targetEntryId = $request->input('journal_entry_id') ? (int) $request->input('journal_entry_id') : null;
+        $voucherNumber = $request->input('voucher_number') ? trim($request->input('voucher_number')) : null;
 
-        DB::transaction(function () use ($salesInvoice, $request, $targetEntryId) {
+        DB::transaction(function () use ($salesInvoice, $request, $targetEntryId, $voucherNumber) {
             $salesInvoice->update(['status' => 'booked']);
-            $this->addToMonthlyJournal($salesInvoice, $request->user()->id, $targetEntryId);
+            $this->addToMonthlyJournal($salesInvoice, $request->user()->id, $targetEntryId, $voucherNumber);
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Фактурата е книжена. Налогот е ажуриран.']);
@@ -272,7 +273,7 @@ class SalesInvoiceController extends Controller
         return to_route('sales-invoices.show', $salesInvoice->id);
     }
 
-    private function addToMonthlyJournal(SalesInvoice $invoice, int $userId, ?int $targetEntryId = null): void
+    private function addToMonthlyJournal(SalesInvoice $invoice, int $userId, ?int $targetEntryId = null, ?string $voucherNumber = null): void
     {
         $date      = $invoice->date;
         $year      = (int) date('Y', strtotime($date));
@@ -282,6 +283,28 @@ class SalesInvoiceController extends Controller
 
         if ($targetEntryId) {
             $entry = JournalEntry::lockForUpdate()->findOrFail($targetEntryId);
+        } elseif ($voucherNumber && preg_match('/^(\d+)-(\d+)$/', $voucherNumber, $m)) {
+            $vGroupCode = (int) $m[1];
+            $vSeqNum    = (int) $m[2];
+            $entry = JournalEntry::where('company_id', $invoice->company_id)
+                ->where('group_code', $vGroupCode)
+                ->where('year', $year)
+                ->where('sequence_number', $vSeqNum)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $entry) {
+                $entry = JournalEntry::create([
+                    'company_id'      => $invoice->company_id,
+                    'group_code'      => $vGroupCode,
+                    'year'            => $year,
+                    'sequence_number' => $vSeqNum,
+                    'entry_date'      => $date,
+                    'description'     => "Излезни фактури – {$monthName} {$year}",
+                    'status'          => JournalEntryStatus::Draft,
+                    'created_by'      => $userId,
+                ]);
+            }
         } else {
             $entry = JournalEntry::where('company_id', $invoice->company_id)
                 ->where('group_code', 30)

@@ -136,14 +136,15 @@ class PurchaseInvoiceController extends Controller
             return back();
         }
 
-        $targetEntryId = $request->input('journal_entry_id') ? (int) $request->input('journal_entry_id') : null;
+        $targetEntryId  = $request->input('journal_entry_id') ? (int) $request->input('journal_entry_id') : null;
+        $voucherNumber  = $request->input('voucher_number') ? trim($request->input('voucher_number')) : null;
 
-        DB::transaction(function () use ($purchaseInvoice, $request, $targetEntryId) {
+        DB::transaction(function () use ($purchaseInvoice, $request, $targetEntryId, $voucherNumber) {
             $purchaseInvoice->update(['status' => 'booked']);
             if ($purchaseInvoice->warehouse_id) {
                 $this->createStockInMovements($purchaseInvoice, $request->user()->id);
             }
-            $this->addToMonthlyJournal($purchaseInvoice, $request->user()->id, $targetEntryId);
+            $this->addToMonthlyJournal($purchaseInvoice, $request->user()->id, $targetEntryId, $voucherNumber);
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Фактурата е книжена. Налогот е ажуриран.']);
@@ -151,7 +152,7 @@ class PurchaseInvoiceController extends Controller
         return to_route('purchase-invoices.show', $purchaseInvoice->id);
     }
 
-    private function addToMonthlyJournal(PurchaseInvoice $invoice, int $userId, ?int $targetEntryId = null): void
+    private function addToMonthlyJournal(PurchaseInvoice $invoice, int $userId, ?int $targetEntryId = null, ?string $voucherNumber = null): void
     {
         $date      = $invoice->date;
         $year      = (int) date('Y', strtotime($date));
@@ -161,6 +162,28 @@ class PurchaseInvoiceController extends Controller
 
         if ($targetEntryId) {
             $entry = JournalEntry::lockForUpdate()->findOrFail($targetEntryId);
+        } elseif ($voucherNumber && preg_match('/^(\d+)-(\d+)$/', $voucherNumber, $m)) {
+            $vGroupCode = (int) $m[1];
+            $vSeqNum    = (int) $m[2];
+            $entry = JournalEntry::where('company_id', $invoice->company_id)
+                ->where('group_code', $vGroupCode)
+                ->where('year', $year)
+                ->where('sequence_number', $vSeqNum)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $entry) {
+                $entry = JournalEntry::create([
+                    'company_id'      => $invoice->company_id,
+                    'group_code'      => $vGroupCode,
+                    'year'            => $year,
+                    'sequence_number' => $vSeqNum,
+                    'entry_date'      => $date,
+                    'description'     => "Влезни фактури – {$monthName} {$year}",
+                    'status'          => JournalEntryStatus::Draft,
+                    'created_by'      => $userId,
+                ]);
+            }
         } else {
             $entry = JournalEntry::where('company_id', $invoice->company_id)
                 ->where('group_code', 20)

@@ -152,19 +152,22 @@ function submitCreate(status: 'draft' | 'booked' = 'draft') {
 }
 
 // ── Booking dialog ────────────────────────────────────────────────────────────
+// ── Booking dialog ────────────────────────────────────────────────────────────
 const showBook        = ref(false);
 const bookingInv      = ref<Invoice | null>(null);
 const bookEntryId     = ref<string>('');
+const bookVoucherNum  = ref<string>('');
 const bookEntries     = ref<{ id: number; label: string; sequence_number: number }[]>([]);
 const loadingBook     = ref(false);
 const submittingBook  = ref(false);
 
 async function openBookDialog(inv: Invoice) {
-    bookingInv.value  = inv;
-    bookEntryId.value = '';
-    bookEntries.value = [];
-    showBook.value    = true;
-    loadingBook.value = true;
+    bookingInv.value    = inv;
+    bookEntryId.value   = '';
+    bookVoucherNum.value = '';
+    bookEntries.value   = [];
+    showBook.value      = true;
+    loadingBook.value   = true;
     try {
         const d = new Date(inv.date);
         const year = d.getFullYear();
@@ -184,7 +187,12 @@ function submitBook() {
     const inv = bookingInv.value;
     if (!inv) return;
     submittingBook.value = true;
-    const payload = bookEntryId.value ? { journal_entry_id: parseInt(bookEntryId.value) } : {};
+    const payload: Record<string, unknown> = {};
+    if (bookVoucherNum.value.trim()) {
+        payload.voucher_number = bookVoucherNum.value.trim();
+    } else if (bookEntryId.value) {
+        payload.journal_entry_id = parseInt(bookEntryId.value);
+    }
     router.post(`/purchase-invoices/${inv.id}/book`, payload, {
         preserveScroll: true,
         onSuccess: () => { showBook.value = false; },
@@ -318,7 +326,7 @@ function deleteInvoice(inv: Invoice) {
                     <div v-if="loadingBook" class="flex h-9 items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 class="size-4 animate-spin" />Вчитување…
                     </div>
-                    <Select v-else v-model="bookEntryId">
+                    <Select v-else v-model="bookEntryId" @update:model-value="bookVoucherNum = ''">
                         <SelectTrigger>
                             <SelectValue placeholder="— Автоматски (месечен налог) —" />
                         </SelectTrigger>
@@ -329,8 +337,17 @@ function deleteInvoice(inv: Invoice) {
                             </SelectItem>
                         </SelectContent>
                     </Select>
+                </div>
+                <div class="grid gap-1.5">
+                    <Label>Или внеси број на налог</Label>
+                    <Input
+                        v-model="bookVoucherNum"
+                        placeholder="пр. 20-0003"
+                        class="font-mono"
+                        @input="bookEntryId = ''"
+                    />
                     <p class="text-xs text-muted-foreground">
-                        Ако не изберете, системот автоматски го наоѓа или создава месечниот налог.
+                        Ако внесеш број, системот го наоѓа или создава налог со тој број. Ако оставиш празно, автоматски се одредува месечниот налог.
                     </p>
                 </div>
             </div>

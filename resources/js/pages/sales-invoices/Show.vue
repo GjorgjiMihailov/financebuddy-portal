@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Printer, Send, BookCheck, AlertTriangle, Trash2, Loader2 } from '@lucide/vue';
 import { formatDate } from '@/lib/formatDate';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { ref, computed } from 'vue';
 
 defineOptions({
@@ -78,12 +79,14 @@ function send() {
 const showBook       = ref(false);
 const bookEntryId    = ref<string>('');
 const bookEntries    = ref<{ id: number; label: string; sequence_number: number }[]>([]);
+const bookVoucherNum = ref<string>('');
 const loadingBook    = ref(false);
 const submittingBook = ref(false);
 
 async function openBookDialog() {
-    bookEntryId.value = '';
-    bookEntries.value = [];
+    bookEntryId.value    = '';
+    bookVoucherNum.value = '';
+    bookEntries.value    = [];
     showBook.value    = true;
     loadingBook.value = true;
     try {
@@ -103,7 +106,12 @@ async function openBookDialog() {
 
 function submitBook() {
     submittingBook.value = true;
-    const payload = bookEntryId.value ? { journal_entry_id: parseInt(bookEntryId.value) } : {};
+    const payload: Record<string, unknown> = {};
+    if (bookVoucherNum.value.trim()) {
+        payload.voucher_number = bookVoucherNum.value.trim();
+    } else if (bookEntryId.value) {
+        payload.journal_entry_id = parseInt(bookEntryId.value);
+    }
     router.post(`/sales-invoices/${props.invoice.id}/book`, payload, {
         onSuccess: () => { showBook.value = false; },
         onFinish: () => { submittingBook.value = false; },
@@ -356,7 +364,7 @@ function deleteInvoice() {
                     <div v-if="loadingBook" class="flex h-9 items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 class="size-4 animate-spin" />Вчитување…
                     </div>
-                    <Select v-else v-model="bookEntryId">
+                    <Select v-else v-model="bookEntryId" @update:model-value="bookVoucherNum = ''">
                         <SelectTrigger>
                             <SelectValue placeholder="— Автоматски (месечен налог) —" />
                         </SelectTrigger>
@@ -367,8 +375,17 @@ function deleteInvoice() {
                             </SelectItem>
                         </SelectContent>
                     </Select>
+                </div>
+                <div class="grid gap-1.5">
+                    <Label>Или внеси број на налог</Label>
+                    <Input
+                        v-model="bookVoucherNum"
+                        placeholder="пр. 30-0003"
+                        class="font-mono"
+                        @input="bookEntryId = ''"
+                    />
                     <p class="text-xs text-muted-foreground">
-                        Ако не изберете, системот автоматски го наоѓа или создава месечниот налог.
+                        Ако внесеш број, системот го наоѓа или создава налог со тој број. Ако оставиш празно, автоматски се одредува месечниот налог.
                     </p>
                 </div>
             </div>
