@@ -52,14 +52,13 @@ class JournalEntryController extends Controller
     {
         $companyId = $this->currentCompanyId($request);
 
-        $entries = JournalEntry::with([
-                'document:id,original_filename',
-                'creator:id,name',
-                'journalGroup:code,name',
-            ])
+        $entries = JournalEntry::with(['creator:id,name', 'journalGroup:code,name'])
+            ->withCount('lines')
+            ->withSum('lines as debit_total', 'debit')
+            ->withSum('lines as credit_total', 'credit')
             ->where('company_id', $companyId)
             ->orderByDesc('year')
-            ->orderBy('group_code')
+            ->orderByDesc('group_code')
             ->orderByDesc('sequence_number')
             ->orderByDesc('id')
             ->paginate(30);

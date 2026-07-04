@@ -10,7 +10,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Финансии', href: '/documents' },
-            { title: 'Книжења', href: '/journal-entries' },
+            { title: 'Список', href: '/journal-entries' },
         ],
     },
 });
@@ -24,7 +24,9 @@ type Entry = {
     reference: string | null;
     description: string | null;
     status: 'draft' | 'posted';
-    document: { id: number; original_filename: string } | null;
+    lines_count: number;
+    debit_total: string | null;
+    credit_total: string | null;
     creator: { id: number; name: string };
     journal_group: JournalGroup | null;
 };
@@ -46,39 +48,44 @@ function voucherNumber(e: Entry): string {
     if (e.group_code === null || e.sequence_number === null) return '—';
     return `${e.group_code}-${String(e.sequence_number).padStart(4, '0')}`;
 }
+
+function fmt(v: string | null): string {
+    if (!v) return '0,00';
+    return Number(v).toLocaleString('mk-MK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 </script>
 
 <template>
-    <Head title="Книжења" />
+    <Head title="Список — Налози" />
 
     <div class="flex flex-col gap-6 p-6">
 
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-semibold">Книжења</h1>
-                <p class="mt-0.5 text-sm text-muted-foreground">{{ entries.total }} налози</p>
+                <h1 class="text-2xl font-semibold">Налози</h1>
+                <p class="mt-0.5 text-sm text-muted-foreground">{{ entries.total }} книговодствени налози</p>
             </div>
         </div>
 
         <div class="rounded-lg border">
             <table class="w-full text-sm">
                 <thead>
-                    <tr class="border-b bg-muted/50">
-                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Налог</th>
-                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Група</th>
-                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Датум</th>
-                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Опис</th>
-                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Документ</th>
-                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Статус</th>
-                        <th class="px-3 py-1.5 text-left font-medium text-muted-foreground">Составил</th>
-                        <th class="px-3 py-1.5"></th>
+                    <tr class="border-b bg-muted/50 text-xs">
+                        <th class="px-3 py-2 text-left font-medium text-muted-foreground">Налог</th>
+                        <th class="px-3 py-2 text-left font-medium text-muted-foreground">Датум</th>
+                        <th class="px-3 py-2 text-left font-medium text-muted-foreground">Опис</th>
+                        <th class="px-3 py-2 text-right font-medium text-muted-foreground">Дебит</th>
+                        <th class="px-3 py-2 text-right font-medium text-muted-foreground">Кредит</th>
+                        <th class="px-3 py-2 text-center font-medium text-muted-foreground">Ставки</th>
+                        <th class="px-3 py-2 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-3 py-2"></th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-if="entries.data.length === 0">
                         <td colspan="8" class="py-16 text-center text-muted-foreground">
                             <FileText class="mx-auto mb-3 size-10 opacity-30" />
-                            Нема книжења
+                            Нема налози
                         </td>
                     </tr>
                     <tr
@@ -86,24 +93,45 @@ function voucherNumber(e: Entry): string {
                         :key="e.id"
                         class="border-b last:border-0 hover:bg-muted/30"
                     >
-                        <td class="px-3 py-1.5 font-mono text-xs font-semibold text-primary">
-                            {{ voucherNumber(e) }}
+                        <!-- Voucher number + group chip -->
+                        <td class="px-3 py-2">
+                            <span class="font-mono text-sm font-bold text-primary">{{ voucherNumber(e) }}</span>
+                            <span v-if="e.journal_group" class="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                                {{ e.journal_group.name }}
+                            </span>
                         </td>
-                        <td class="px-3 py-1.5 text-xs text-muted-foreground">
-                            {{ e.journal_group?.name ?? '—' }}
+
+                        <!-- Date -->
+                        <td class="px-3 py-2 font-mono text-xs">{{ formatDate(e.entry_date) }}</td>
+
+                        <!-- Description -->
+                        <td class="max-w-xs px-3 py-2 text-sm">
+                            <span class="line-clamp-1">{{ e.description ?? '—' }}</span>
+                            <span v-if="e.reference" class="text-xs text-muted-foreground">{{ e.reference }}</span>
                         </td>
-                        <td class="px-3 py-1.5 font-mono text-xs">{{ formatDate(e.entry_date) }}</td>
-                        <td class="px-3 py-1.5">{{ e.description ?? '—' }}</td>
-                        <td class="px-3 py-1.5 text-xs text-muted-foreground">
-                            {{ e.document?.original_filename ?? '—' }}
+
+                        <!-- Debit total -->
+                        <td class="px-3 py-2 text-right font-mono text-xs">{{ fmt(e.debit_total) }}</td>
+
+                        <!-- Credit total -->
+                        <td class="px-3 py-2 text-right font-mono text-xs">{{ fmt(e.credit_total) }}</td>
+
+                        <!-- Lines count -->
+                        <td class="px-3 py-2 text-center">
+                            <span class="rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                                {{ e.lines_count }}
+                            </span>
                         </td>
-                        <td class="px-3 py-1.5">
+
+                        <!-- Status -->
+                        <td class="px-3 py-2">
                             <Badge :variant="STATUS_VARIANT[e.status]" class="text-xs">
                                 {{ STATUS_LABEL[e.status] }}
                             </Badge>
                         </td>
-                        <td class="px-3 py-1.5 text-muted-foreground">{{ e.creator.name }}</td>
-                        <td class="px-3 py-1.5">
+
+                        <!-- Actions -->
+                        <td class="px-3 py-2">
                             <Button variant="ghost" size="icon" as-child>
                                 <Link :href="`/journal-entries/${e.id}`">
                                     <Eye class="size-4" />
