@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\JournalEntryStatus;
 use App\Models\Item;
+use App\Models\JournalEntry;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceLine;
 use App\Models\Warehouse;
@@ -139,11 +141,55 @@ class PurchaseInvoiceController extends Controller
             if ($purchaseInvoice->warehouse_id) {
                 $this->createStockInMovements($purchaseInvoice, $request->user()->id);
             }
+            $this->addToMonthlyJournal($purchaseInvoice, $request->user()->id);
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Фактурата е книжена. Залихите се ажурирани.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Фактурата е книжена. Налогот е ажуриран.']);
 
         return to_route('purchase-invoices.show', $purchaseInvoice->id);
+    }
+
+    private function addToMonthlyJournal(PurchaseInvoice $invoice, int $userId): void
+    {
+        $date      = $invoice->date;
+        $year      = (int) date('Y', strtotime($date));
+        $month     = (int) date('n', strtotime($date));
+        $monthName = ['Јануари','Февруари','Март','Април','Мај','Јуни',
+                      'Јули','Август','Септември','Октомври','Ноември','Декември'][$month - 1];
+
+        $entry = JournalEntry::where('company_id', $invoice->company_id)
+            ->where('group_code', 20)
+            ->where('year', $year)
+            ->where('sequence_number', $month)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $entry) {
+            $entry = JournalEntry::create([
+                'company_id'      => $invoice->company_id,
+                'group_code'      => 20,
+                'year'            => $year,
+                'sequence_number' => $month,
+                'entry_date'      => $date,
+                'description'     => "Влезни фактури – {$monthName} {$year}",
+                'status'          => JournalEntryStatus::Draft,
+                'created_by'      => $userId,
+            ]);
+        }
+
+        $invoice->loadMissing('kontragent');
+        $partner   = $invoice->kontragent?->name ?? $invoice->supplier_name ?? '—';
+        $sortOrder = $entry->lines()->count();
+
+        $entry->lines()->create([
+            'sort_order'    => $sortOrder,
+            'account_code'  => null,
+            'kontragent_id' => $invoice->kontragent_id,
+            'line_date'     => $date,
+            'description'   => "{$invoice->invoice_number} – {$partner}",
+            'debit'         => $invoice->total_amount,
+            'credit'        => 0,
+        ]);
     }
 
     public function update(Request $request, PurchaseInvoice $purchaseInvoice): RedirectResponse

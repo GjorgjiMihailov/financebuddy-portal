@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\JournalEntryStatus;
 use App\Models\Item;
+use App\Models\JournalEntry;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceLine;
 use App\Models\Warehouse;
@@ -251,17 +253,64 @@ class SalesInvoiceController extends Controller
         return to_route('sales-invoices.show', $salesInvoice->id);
     }
 
-    public function book(SalesInvoice $salesInvoice): RedirectResponse
+    public function book(Request $request, SalesInvoice $salesInvoice): RedirectResponse
     {
         if ($salesInvoice->status !== 'sent') {
             Inertia::flash('toast', ['type' => 'error', 'message' => 'Само испратени фактури можат да се книжат.']);
             return back();
         }
 
-        $salesInvoice->update(['status' => 'booked']);
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Фактурата е книжена.']);
+        DB::transaction(function () use ($salesInvoice, $request) {
+            $salesInvoice->update(['status' => 'booked']);
+            $this->addToMonthlyJournal($salesInvoice, $request->user()->id);
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Фактурата е книжена. Налогот е ажуриран.']);
 
         return to_route('sales-invoices.show', $salesInvoice->id);
+    }
+
+    private function addToMonthlyJournal(SalesInvoice $invoice, int $userId): void
+    {
+        $date      = $invoice->date;
+        $year      = (int) date('Y', strtotime($date));
+        $month     = (int) date('n', strtotime($date));
+        $monthName = ['Јануари','Февруари','Март','Април','Мај','Јуни',
+                      'Јули','Август','Септември','Октомври','Ноември','Декември'][$month - 1];
+
+        $entry = JournalEntry::where('company_id', $invoice->company_id)
+            ->where('group_code', 30)
+            ->where('year', $year)
+            ->where('sequence_number', $month)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $entry) {
+            $entry = JournalEntry::create([
+                'company_id'      => $invoice->company_id,
+                'group_code'      => 30,
+                'year'            => $year,
+                'sequence_number' => $month,
+                'entry_date'      => $date,
+                'description'     => "Излезни фактури – {$monthName} {$year}",
+                'status'          => JournalEntryStatus::Draft,
+                'created_by'      => $userId,
+            ]);
+        }
+
+        $invoice->loadMissing('kontragent');
+        $partner   = $invoice->kontragent?->name ?? $invoice->client_name ?? '—';
+        $sortOrder = $entry->lines()->count();
+
+        $entry->lines()->create([
+            'sort_order'    => $sortOrder,
+            'account_code'  => null,
+            'kontragent_id' => $invoice->kontragent_id,
+            'line_date'     => $date,
+            'description'   => "{$invoice->invoice_number} – {$partner}",
+            'debit'         => 0,
+            'credit'        => $invoice->total_amount,
+        ]);
     }
 
     public function destroy(Request $request, SalesInvoice $salesInvoice): RedirectResponse
