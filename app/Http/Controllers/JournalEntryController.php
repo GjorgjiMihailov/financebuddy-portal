@@ -9,6 +9,7 @@ use App\Models\ChartOfAccount;
 use App\Models\Document;
 use App\Models\JournalEntry;
 use App\Models\JournalGroup;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,35 @@ use Inertia\Response;
 
 class JournalEntryController extends Controller
 {
+
+    public function forBooking(Request $request): JsonResponse
+    {
+        $companyId = $this->currentCompanyId($request);
+        $groupCode = (int) $request->group_code;
+        $year      = (int) $request->year;
+        $month     = $request->month ? (int) $request->month : null;
+
+        $entries = JournalEntry::where('company_id', $companyId)
+            ->where('group_code', $groupCode)
+            ->where('year', $year)
+            ->where('status', JournalEntryStatus::Draft)
+            ->orderBy('sequence_number')
+            ->get(['id', 'group_code', 'sequence_number', 'description'])
+            ->map(fn ($e) => [
+                'id'              => $e->id,
+                'label'           => sprintf('%d-%04d — %s', $e->group_code, $e->sequence_number, $e->description),
+                'sequence_number' => $e->sequence_number,
+            ]);
+
+        $suggestedId = $month
+            ? $entries->firstWhere('sequence_number', $month)['id'] ?? null
+            : null;
+
+        return response()->json([
+            'entries'     => $entries->values(),
+            'suggestedId' => $suggestedId,
+        ]);
+    }
 
     public function index(Request $request): Response
     {

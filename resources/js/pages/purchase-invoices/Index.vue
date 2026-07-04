@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm, usePage } from "@inertiajs/vue3";
-import { Plus, Eye, Trash2, FileText, X, BookCheck } from "@lucide/vue";
+import { Plus, Eye, Trash2, FileText, X, BookCheck, Loader2 } from "@lucide/vue";
 import { ref, computed, watch } from "vue";
 import { formatDate } from '@/lib/formatDate';
 import { Badge } from "@/components/ui/badge";
@@ -151,9 +151,45 @@ function submitCreate(status: 'draft' | 'booked' = 'draft') {
     createForm.post("/purchase-invoices", { onSuccess: () => { showCreate.value = false; } });
 }
 
-function bookInvoice(inv: Invoice) {
-    if (!confirm(`Книжи ја фактура ${inv.invoice_number}?\n\nСистемот ќе создаде книговодствен налог и автоматски ќе ги запише залихите.`)) return;
-    router.post(`/purchase-invoices/${inv.id}/book`, {}, { preserveScroll: true });
+// ── Booking dialog ────────────────────────────────────────────────────────────
+const showBook        = ref(false);
+const bookingInv      = ref<Invoice | null>(null);
+const bookEntryId     = ref<string>('');
+const bookEntries     = ref<{ id: number; label: string; sequence_number: number }[]>([]);
+const loadingBook     = ref(false);
+const submittingBook  = ref(false);
+
+async function openBookDialog(inv: Invoice) {
+    bookingInv.value  = inv;
+    bookEntryId.value = '';
+    bookEntries.value = [];
+    showBook.value    = true;
+    loadingBook.value = true;
+    try {
+        const d = new Date(inv.date);
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const res = await fetch(`/api/journal-entries/for-booking?group_code=20&year=${year}&month=${month}`);
+        if (res.ok) {
+            const data = await res.json();
+            bookEntries.value = data.entries;
+            bookEntryId.value = data.suggestedId ? String(data.suggestedId) : '';
+        }
+    } finally {
+        loadingBook.value = false;
+    }
+}
+
+function submitBook() {
+    const inv = bookingInv.value;
+    if (!inv) return;
+    submittingBook.value = true;
+    const payload = bookEntryId.value ? { journal_entry_id: parseInt(bookEntryId.value) } : {};
+    router.post(`/purchase-invoices/${inv.id}/book`, payload, {
+        preserveScroll: true,
+        onSuccess: () => { showBook.value = false; },
+        onFinish: () => { submittingBook.value = false; },
+    });
 }
 
 function fmt(v: string | number) {
@@ -234,7 +270,7 @@ function deleteInvoice(inv: Invoice) {
                                     variant="ghost" size="icon"
                                     class="text-emerald-600 hover:text-emerald-700"
                                     title="Книжи"
-                                    @click="bookInvoice(inv)"
+                                    @click="openBookDialog(inv)"
                                 >
                                     <BookCheck class="size-4" />
                                 </Button>
@@ -264,6 +300,49 @@ function deleteInvoice(inv: Invoice) {
         </div>
 
     </div>
+
+    <!-- Book Dialog -->
+    <Dialog v-model:open="showBook">
+        <DialogContent class="max-w-sm">
+            <DialogHeader>
+                <DialogTitle>Книжи влезна фактура</DialogTitle>
+            </DialogHeader>
+            <div v-if="bookingInv" class="grid gap-4 py-1">
+                <div class="rounded-lg bg-muted/40 px-3 py-2 text-sm">
+                    <p class="font-mono font-semibold">{{ bookingInv.invoice_number }}</p>
+                    <p class="text-muted-foreground">{{ bookingInv.kontragent?.name ?? bookingInv.supplier_name ?? '—' }}</p>
+                    <p class="mt-1 font-semibold">{{ fmt(bookingInv.total_amount) }} MKD</p>
+                </div>
+                <div class="grid gap-1.5">
+                    <Label>Книговодствен налог</Label>
+                    <div v-if="loadingBook" class="flex h-9 items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 class="size-4 animate-spin" />Вчитување…
+                    </div>
+                    <Select v-else v-model="bookEntryId">
+                        <SelectTrigger>
+                            <SelectValue placeholder="— Автоматски (месечен налог) —" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">— Автоматски (месечен налог) —</SelectItem>
+                            <SelectItem v-for="e in bookEntries" :key="e.id" :value="String(e.id)">
+                                {{ e.label }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <p class="text-xs text-muted-foreground">
+                        Ако не изберете, системот автоматски го наоѓа или создава месечниот налог.
+                    </p>
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" @click="showBook = false">Откажи</Button>
+                <Button :disabled="submittingBook" @click="submitBook">
+                    <Loader2 v-if="submittingBook" class="mr-2 size-4 animate-spin" />
+                    {{ submittingBook ? 'Книжење…' : 'Книжи' }}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 
     <!-- Create Dialog -->
     <Dialog v-model:open="showCreate">

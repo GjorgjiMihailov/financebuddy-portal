@@ -63,6 +63,9 @@ Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
     Route::get('api/journal-groups', [JournalGroupController::class, 'list'])->name('journal-groups.list');
     Route::get('api/journal-groups/next-sequence', [JournalGroupController::class, 'nextSequence'])->name('journal-groups.next-sequence');
 
+    // ── Journal Entries API ────────────────────────────────────────────────────
+    Route::get('api/journal-entries/for-booking', [JournalEntryController::class, 'forBooking'])->name('journal-entries.for-booking');
+
     // ── Account / Partner search ───────────────────────────────────────────────
     Route::get('api/accounts/search', [ChartOfAccountController::class, 'search'])->name('accounts.search');
     Route::get('api/partners/search', [KontragentController::class, 'searchApi'])->name('partners.search');
