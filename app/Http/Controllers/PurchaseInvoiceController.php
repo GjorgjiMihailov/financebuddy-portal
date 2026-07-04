@@ -219,9 +219,9 @@ class PurchaseInvoiceController extends Controller
         return to_route('purchase-invoices.show', $purchaseInvoice->id);
     }
 
-    public function destroy(PurchaseInvoice $purchaseInvoice): RedirectResponse
+    public function destroy(Request $request, PurchaseInvoice $purchaseInvoice): RedirectResponse
     {
-        if ($purchaseInvoice->status !== 'draft') {
+        if ($purchaseInvoice->status !== 'draft' && ! $request->user()->hasRole('admin')) {
             return back()->withErrors(['status' => 'Само нацрт фактури можат да се избришат.']);
         }
 

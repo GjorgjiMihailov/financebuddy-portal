@@ -264,9 +264,9 @@ class SalesInvoiceController extends Controller
         return to_route('sales-invoices.show', $salesInvoice->id);
     }
 
-    public function destroy(SalesInvoice $salesInvoice): RedirectResponse
+    public function destroy(Request $request, SalesInvoice $salesInvoice): RedirectResponse
     {
-        if ($salesInvoice->status !== 'draft') {
+        if ($salesInvoice->status !== 'draft' && ! $request->user()->hasRole('admin')) {
             return back()->withErrors(['status' => 'Само нацрт фактури можат да се избришат.']);
         }
 

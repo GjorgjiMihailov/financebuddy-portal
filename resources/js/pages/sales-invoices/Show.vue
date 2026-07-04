@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowLeft, Printer, Send, BookCheck, AlertTriangle } from '@lucide/vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { ArrowLeft, Printer, Send, BookCheck, AlertTriangle, Trash2 } from '@lucide/vue';
 import { formatDate } from '@/lib/formatDate';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 defineOptions({
     layout: {
@@ -92,6 +92,14 @@ const cur = props.invoice.currency ?? 'MKD';
 
 function printPage() { window.print(); }
 const rate = props.invoice.exchange_rate ? parseFloat(props.invoice.exchange_rate) : null;
+
+const page = usePage();
+const isAdmin = computed(() => (page.props.auth as any)?.user?.roles?.includes('admin') ?? false);
+
+function deleteInvoice() {
+    if (!confirm(`Избриши излезна фактура ${props.invoice.invoice_number}?`)) return;
+    router.delete(`/sales-invoices/${props.invoice.id}`);
+}
 </script>
 
 <template>
@@ -129,6 +137,9 @@ const rate = props.invoice.exchange_rate ? parseFloat(props.invoice.exchange_rat
                 </Button>
                 <Button variant="outline" @click="printPage">
                     <Printer class="mr-2 size-4" />Печати / PDF
+                </Button>
+                <Button v-if="isAdmin" variant="destructive" @click="deleteInvoice">
+                    <Trash2 class="mr-2 size-4" />Бриши
                 </Button>
             </div>
         </div>

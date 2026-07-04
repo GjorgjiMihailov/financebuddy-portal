@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Head, Link } from "@inertiajs/vue3";
-import { ArrowLeft, Printer } from "@lucide/vue";
+import { Head, Link, router, usePage } from "@inertiajs/vue3";
+import { ArrowLeft, Printer, Trash2 } from "@lucide/vue";
 import { formatDate } from '@/lib/formatDate';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { computed } from 'vue';
 
 defineOptions({
     layout: {
@@ -53,6 +54,14 @@ function fmt(v: string | number) {
 }
 
 function printPage() { window.print(); }
+
+const page = usePage();
+const isAdmin = computed(() => (page.props.auth as any)?.user?.roles?.includes('admin') ?? false);
+
+function deleteInvoice() {
+    if (!confirm(`Избриши влезна фактура ${props.invoice.invoice_number}?`)) return;
+    router.delete(`/purchase-invoices/${props.invoice.id}`);
+}
 </script>
 
 <template>
@@ -65,8 +74,11 @@ function printPage() { window.print(); }
         </Button>
         <div class="flex items-center gap-2">
             <Badge :variant="STATUS_VARIANT[invoice.status]">{{ STATUS_LABELS[invoice.status] }}</Badge>
-            <Button @click="printPage">
+            <Button @click="printPage" variant="outline">
                 <Printer class="mr-2 size-4" />Печати / PDF
+            </Button>
+            <Button v-if="isAdmin" variant="destructive" @click="deleteInvoice">
+                <Trash2 class="mr-2 size-4" />Бриши
             </Button>
         </div>
     </div>
