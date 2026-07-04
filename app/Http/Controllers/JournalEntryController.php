@@ -48,15 +48,7 @@ class JournalEntryController extends Controller
 
         $document->load(['company:id,name', 'extraction', 'lineItems.suggestedAccount']);
 
-        $prefillLines = $document->lineItems
-            ->filter(fn ($item) => $item->confirmed_account_code || $item->suggested_account_code)
-            ->map(fn ($item) => [
-                'account_code' => $item->confirmed_account_code ?? $item->suggested_account_code,
-                'description'  => $item->description,
-                'debit'        => 0,
-                'credit'       => 0,
-            ])
-            ->values();
+        [$prefillLines, $suggestedGroupCode] = $this->buildPrefillLines($document);
 
         $accounts = ChartOfAccount::where('allows_posting', true)
             ->where('is_active', true)
@@ -67,11 +59,64 @@ class JournalEntryController extends Controller
         $journalGroups = JournalGroup::orderBy('code')->get(['code', 'name']);
 
         return Inertia::render('journal-entries/Create', [
-            'document'      => $document,
-            'accounts'      => $accounts,
-            'prefillLines'  => $prefillLines,
-            'journalGroups' => $journalGroups,
+            'document'           => $document,
+            'accounts'           => $accounts,
+            'prefillLines'       => $prefillLines,
+            'journalGroups'      => $journalGroups,
+            'suggestedGroupCode' => $suggestedGroupCode,
         ]);
+    }
+
+    private function buildPrefillLines(Document $document): array
+    {
+        $ext = $document->extraction;
+
+        if (! $ext || ! in_array($document->type, [
+            \App\Enums\DocumentType::InvoiceIn,
+            \App\Enums\DocumentType::InvoiceOut,
+        ])) {
+            // Non-invoice: fall back to AI line-item suggestions (no amounts)
+            $lines = $document->lineItems
+                ->filter(fn ($item) => $item->confirmed_account_code || $item->suggested_account_code)
+                ->map(fn ($item) => [
+                    'account_code' => $item->confirmed_account_code ?? $item->suggested_account_code,
+                    'description'  => $item->description,
+                    'debit'        => 0,
+                    'credit'       => 0,
+                ])
+                ->values()
+                ->all();
+
+            return [$lines, null];
+        }
+
+        $subtotal    = round((float) ($ext->subtotal    ?? 0), 2);
+        $vatAmount   = round((float) ($ext->vat_amount  ?? 0), 2);
+        $totalAmount = round((float) ($ext->total_amount ?? $subtotal + $vatAmount), 2);
+        $vendor      = $ext->vendor_name ?? '';
+
+        if ($document->type === \App\Enums\DocumentType::InvoiceIn) {
+            $lines = [
+                // ДОЛЖИ: Трошок (549 — Потребна проверка) = Основица
+                ['account_code' => '549', 'description' => "Основица — {$vendor} [Потребна проверка на сметка]", 'debit' => $subtotal,    'credit' => 0],
+                // ДОЛЖИ: Влезен ДДВ (237) = ДДВ
+                ['account_code' => '237', 'description' => "Влезен ДДВ — {$vendor}",  'debit' => $vatAmount,   'credit' => 0],
+                // ПОБАРУВА: Обврски кон добавувачи (400) = Вкупно
+                ['account_code' => '400', 'description' => "Обврска — {$vendor}",      'debit' => 0,            'credit' => $totalAmount],
+            ];
+            return [$lines, 20];
+        }
+
+        // InvoiceOut
+        $lines = [
+            // ДОЛЖИ: Побарувања од купувачи (200) = Вкупно
+            ['account_code' => '200', 'description' => "Побарување — {$vendor}", 'debit' => $totalAmount, 'credit' => 0],
+            // ПОБАРУВА: Приходи од стока (630) = Основица
+            ['account_code' => '630', 'description' => "Приход — {$vendor}",     'debit' => 0,            'credit' => $subtotal],
+            // ПОБАРУВА: Обврски за ДДВ (450) = ДДВ
+            ['account_code' => '450', 'description' => "Излезен ДДВ — {$vendor}", 'debit' => 0,           'credit' => $vatAmount],
+        ];
+        return [$lines, 30];
     }
 
     public function store(StoreJournalEntryRequest $request, Document $document): RedirectResponse

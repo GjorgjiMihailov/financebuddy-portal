@@ -29,6 +29,7 @@ const props = defineProps<{
     accounts: AccountGroup;
     prefillLines: { account_code: string; description: string; debit: number; credit: number }[];
     journalGroups: JournalGroup[];
+    suggestedGroupCode: number | null;
 }>();
 
 defineOptions({
@@ -43,7 +44,7 @@ defineOptions({
 const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 0 });
 
 const form = useForm({
-    group_code:       null as number | null,
+    group_code:       props.suggestedGroupCode ?? null as number | null,
     description:      props.document.extraction?.vendor_name
         ? `Фактура — ${props.document.extraction.vendor_name}`
         : '',
