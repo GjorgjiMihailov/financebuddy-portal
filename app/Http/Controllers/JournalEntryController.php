@@ -158,9 +158,13 @@ class JournalEntryController extends Controller
         $year      = (int) date('Y', strtotime($request->entry_date));
 
         $entry = DB::transaction(function () use ($request, $document, $groupCode, $year) {
-            $seq = $groupCode !== null
-                ? $this->nextSequence($groupCode, $year, $document->company_id)
-                : null;
+            if ($request->sequence_number !== null) {
+                $seq = (int) $request->sequence_number;
+            } elseif ($groupCode !== null) {
+                $seq = $this->nextSequence($groupCode, $year, $document->company_id);
+            } else {
+                $seq = null;
+            }
 
             $entry = JournalEntry::create([
                 'document_id'     => $document->id,

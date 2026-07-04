@@ -50,6 +50,7 @@ const form = useForm({
         : '',
     entry_date:       props.document.extraction?.document_date ?? new Date().toISOString().slice(0, 10),
     reference:        props.document.extraction?.document_number ?? '',
+    sequence_number:  null as number | null,
     post_immediately: false,
     lines:            props.prefillLines.length >= 2
         ? props.prefillLines.map(l => ({ ...l }))
@@ -68,6 +69,10 @@ async function loadNextVoucher() {
     if (res.ok) {
         const data = await res.json();
         nextVoucherPreview.value = data.voucher_number;
+        const parts = (data.voucher_number as string).split('-');
+        if (parts.length === 2) {
+            form.sequence_number = parseInt(parts[1]);
+        }
     }
 }
 
@@ -163,11 +168,19 @@ function submitPost() {
                         </option>
                     </select>
                 </div>
-                <div v-if="nextVoucherPreview" class="grid gap-2">
-                    <Label>Следен број</Label>
-                    <div class="flex h-9 items-center rounded-md border bg-muted/50 px-3 font-mono text-sm font-semibold text-primary">
-                        {{ nextVoucherPreview }}
-                    </div>
+                <div v-if="form.group_code" class="grid gap-2">
+                    <Label for="sequence_number">Број на налог</Label>
+                    <Input
+                        id="sequence_number"
+                        v-model.number="form.sequence_number"
+                        type="number"
+                        min="1"
+                        placeholder="авто"
+                        class="font-mono"
+                    />
+                    <p v-if="form.sequence_number && form.group_code" class="font-mono text-xs font-semibold text-primary">
+                        {{ form.group_code }}-{{ String(form.sequence_number).padStart(4, '0') }}
+                    </p>
                 </div>
             </div>
 

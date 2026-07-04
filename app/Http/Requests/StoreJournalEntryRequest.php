@@ -16,6 +16,7 @@ class StoreJournalEntryRequest extends FormRequest
     {
         return [
             'group_code'          => ['nullable', 'integer', 'exists:journal_groups,code'],
+            'sequence_number'     => ['nullable', 'integer', 'min:1'],
             'description'        => ['required', 'string', 'max:500'],
             'entry_date'         => ['required', 'date'],
             'reference'          => ['nullable', 'string', 'max:100'],
