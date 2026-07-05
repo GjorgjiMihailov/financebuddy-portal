@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DocumentStatus;
+use App\Enums\DocumentType;
 use App\Enums\JournalEntryStatus;
 use App\Http\Requests\StoreJournalEntryRequest;
 use App\Models\ChartOfAccount;
@@ -10,6 +11,8 @@ use App\Models\Document;
 use App\Models\JournalEntry;
 use App\Models\JournalGroup;
 use App\Models\Kontragent;
+use App\Models\PurchaseInvoice;
+use App\Models\SalesInvoice;
 use App\Services\MonthlyJournalResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -313,6 +316,8 @@ class JournalEntryController extends Controller
                 ]);
             }
 
+            $this->createLinkedMaterialInvoice($document, $request);
+
             return $entry;
         });
 
@@ -324,6 +329,98 @@ class JournalEntryController extends Controller
         }
 
         return to_route('journal-entries.show', $entry);
+    }
+
+    /**
+     * Кога се книжи прикачена влезна/излезна фактура преку AI-патеката, покрај
+     * книговодственото налог, создади и структуриран запис во Материјално
+     * (PurchaseInvoice/SalesInvoice) за да се гледа во тој дел на порталот.
+     * Без поврзување со Item/Магацин — намерно нема стоковно движење (види договор).
+     */
+    private function createLinkedMaterialInvoice(Document $document, Request $request): void
+    {
+        if (! in_array($document->type, [DocumentType::InvoiceIn, DocumentType::InvoiceOut], true)) {
+            return;
+        }
+
+        $ext = $document->extraction;
+        if (! $ext) {
+            return;
+        }
+
+        $kontragentId = $request->kontragent_id;
+        $invoiceDate  = $ext->document_date ?? $request->entry_date;
+        $invoiceNumber = $ext->document_number ?? $request->reference ?? ('AI-' . $document->id);
+
+        $document->loadMissing('lineItems');
+        $lineItems = $document->lineItems;
+
+        if ($lineItems->isEmpty()) {
+            // Нема детектирани ставки — една генерична ставка колку да се сочуваат вкупните износи
+            $subtotal = (float) ($ext->subtotal ?? 0);
+            $vatAmount = (float) ($ext->vat_amount ?? 0);
+            $vatRate = $subtotal > 0 ? round($vatAmount / $subtotal * 100, 2) : 0;
+
+            $lineItems = collect([(object) [
+                'description'  => $request->description,
+                'quantity'     => 1,
+                'unit'         => 'бр',
+                'unit_price'   => $subtotal,
+                'vat_rate'     => $vatRate,
+                'vat_amount'   => $vatAmount,
+                'total_amount' => (float) ($ext->total_amount ?? 0),
+            ]]);
+        }
+
+        if ($document->type === DocumentType::InvoiceIn) {
+            $invoice = PurchaseInvoice::create([
+                'company_id'     => $document->company_id,
+                'kontragent_id'  => $kontragentId,
+                'document_id'    => $document->id,
+                'supplier_name'  => $kontragentId ? null : $ext->vendor_name,
+                'invoice_number' => $invoiceNumber,
+                'date'           => $invoiceDate,
+                'due_date'       => $ext->due_date,
+                'subtotal'       => $ext->subtotal ?? 0,
+                'vat_total'      => $ext->vat_amount ?? 0,
+                'total_amount'   => $ext->total_amount ?? 0,
+                'status'         => 'booked',
+                'created_by'     => $request->user()->id,
+            ]);
+        } else {
+            $invoice = SalesInvoice::create([
+                'company_id'     => $document->company_id,
+                'document_id'    => $document->id,
+                'kontragent_id'  => $kontragentId,
+                'client_name'    => $kontragentId ? null : $ext->customer_name,
+                'invoice_number' => $invoiceNumber,
+                'date'           => $invoiceDate,
+                'due_date'       => $ext->due_date,
+                'subtotal'       => $ext->subtotal ?? 0,
+                'vat_total'      => $ext->vat_amount ?? 0,
+                'total_amount'   => $ext->total_amount ?? 0,
+                'status'         => 'booked',
+                'created_by'     => $request->user()->id,
+            ]);
+        }
+
+        foreach ($lineItems as $i => $item) {
+            $totalIncVat = (float) ($item->total_amount ?? 0);
+            $vatAmount   = (float) ($item->vat_amount ?? 0);
+
+            $invoice->lines()->create([
+                'item_id'            => null,
+                'description'        => $item->description ?? '',
+                'quantity'           => $item->quantity ?? 1,
+                'unit'               => $item->unit ?? 'бр',
+                'unit_price'         => $item->unit_price ?? 0,
+                'vat_rate'           => $item->vat_rate ?? 0,
+                'line_total_ex_vat'  => round($totalIncVat - $vatAmount, 2),
+                'vat_amount'         => $vatAmount,
+                'line_total_inc_vat' => $totalIncVat,
+                'sort_order'         => $i,
+            ]);
+        }
     }
 
     public function show(JournalEntry $journalEntry): Response

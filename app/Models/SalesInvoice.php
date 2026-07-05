@@ -10,6 +10,7 @@ class SalesInvoice extends Model
 {
     protected $fillable = [
         'company_id',
+        'document_id',
         'warehouse_id',
         'kontragent_id',
         'client_name',
@@ -40,6 +41,11 @@ class SalesInvoice extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function document(): BelongsTo
+    {
+        return $this->belongsTo(Document::class);
     }
 
     public function warehouse(): BelongsTo
