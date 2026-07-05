@@ -23,7 +23,7 @@ class ProcessDocumentJob implements ShouldQueue
     use Queueable;
 
     public int $tries   = 2;
-    public int $timeout = 120;
+    public int $timeout = 300;
 
     public function __construct(
         public Document $document,
@@ -491,7 +491,7 @@ PROMPT;
             'x-api-key'         => config('services.anthropic.key'),
             'anthropic-version' => config('services.anthropic.version'),
             'content-type'      => 'application/json',
-        ])->timeout(90)->post('https://api.anthropic.com/v1/messages', [
+        ])->timeout(280)->post('https://api.anthropic.com/v1/messages', [
             'model'      => config('services.anthropic.model'),
             'max_tokens' => 8192,
             'messages'   => [[
