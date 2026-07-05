@@ -345,15 +345,15 @@ class SalesInvoiceController extends Controller
         $hasGoods    = $invoice->lines->contains(fn ($l) => $l->item && ! $l->item->is_service);
         $hasServices = $invoice->lines->contains(fn ($l) => $l->item && $l->item->is_service);
         if ($hasServices && ! $hasGoods) {
-            $revenueAccount = '620'; // Приходи од услуги — домашни
+            $revenueAccount = '740'; // Приходи за продадени производи и услуги во земјата
         } else {
-            $revenueAccount = '630'; // Приходи од продажба на стока — домашна
+            $revenueAccount = '741'; // Приходи за продадени стоки во земјата
         }
 
-        // ДОЛЖИ: Побарувања од купувачи (200) = Вкупно
+        // ДОЛЖИ: Побарувања од купувачи (120) = Вкупно
         $entry->lines()->create([
             'sort_order'    => $sort++,
-            'account_code'  => '200',
+            'account_code'  => '120',
             'kontragent_id' => $invoice->kontragent_id,
             'line_date'     => $date,
             'description'   => $ref,
@@ -361,7 +361,7 @@ class SalesInvoiceController extends Controller
             'credit'        => 0,
         ]);
 
-        // ПОБАРУВА: Приходи (620/630) = Основица
+        // ПОБАРУВА: Приходи (740/741) = Основица
         $entry->lines()->create([
             'sort_order'    => $sort++,
             'account_code'  => $revenueAccount,
@@ -372,11 +372,11 @@ class SalesInvoiceController extends Controller
             'credit'        => (float) $invoice->subtotal,
         ]);
 
-        // ПОБАРУВА: Обврски за ДДВ (450) по стапка
+        // ПОБАРУВА: Обврски за ДДВ (230) по стапка
         foreach ($vatByRate as $rate => $vatAmount) {
             $entry->lines()->create([
                 'sort_order'    => $sort++,
-                'account_code'  => '450',
+                'account_code'  => '230',
                 'kontragent_id' => $invoice->kontragent_id,
                 'line_date'     => $date,
                 'description'   => "{$ref} / ДДВ {$rate}%",

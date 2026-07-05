@@ -111,7 +111,7 @@ class JournalEntryController extends Controller
 
         // ── Банкарски извод ─────────────────────────────────────────────────
         if ($document->type === \App\Enums\DocumentType::BankStatement) {
-            $bankAccount = '271'; // Тековна сметка во банка (денари)
+            $bankAccount = '100'; // Парични средства на трансакциски сметки во денари
 
             $lineItems = $document->lineItems
                 ->filter(fn ($i) => (float)($i->debit ?? 0) > 0 || (float)($i->credit ?? 0) > 0);
@@ -120,7 +120,7 @@ class JournalEntryController extends Controller
                 $lines = [];
                 $sort  = 0;
                 foreach ($lineItems as $item) {
-                    $counter  = $item->confirmed_account_code ?? $item->suggested_account_code ?? '200';
+                    $counter  = $item->confirmed_account_code ?? $item->suggested_account_code ?? '449';
                     $desc     = $item->description ?? '';
                     $ref      = $item->reference ? " [{$item->reference}]" : '';
                     $debitAmt = (float)($item->debit  ?? 0);
@@ -149,7 +149,7 @@ class JournalEntryController extends Controller
                     $lines[] = ['account_code' => '120',        'description' => 'Побарувања',     'debit' => 0, 'credit' => (float)$ext->total_credit];
                 }
                 if ((float)($ext->total_debit ?? 0) > 0) {
-                    $lines[] = ['account_code' => '400',        'description' => 'Вкупно платено', 'debit' => (float)$ext->total_debit, 'credit' => 0];
+                    $lines[] = ['account_code' => '220',        'description' => 'Вкупно платено', 'debit' => (float)$ext->total_debit, 'credit' => 0];
                     $lines[] = ['account_code' => $bankAccount, 'description' => 'Платено',        'debit' => 0, 'credit' => (float)$ext->total_debit];
                 }
                 return [$lines, 10];
@@ -158,7 +158,7 @@ class JournalEntryController extends Controller
             // Ultimate fallback — empty template
             return [[
                 ['account_code' => $bankAccount, 'description' => 'Денарска сметка', 'debit' => 0, 'credit' => 0],
-                ['account_code' => '200',         'description' => 'Контрапартија',   'debit' => 0, 'credit' => 0],
+                ['account_code' => '449',         'description' => 'Контрапартија',   'debit' => 0, 'credit' => 0],
             ], 10];
         }
 
@@ -188,24 +188,24 @@ class JournalEntryController extends Controller
 
         if ($document->type === \App\Enums\DocumentType::InvoiceIn) {
             $lines = [
-                // ДОЛЖИ: Трошок (549 — Потребна проверка) = Основица
-                ['account_code' => '549', 'description' => "Основица — {$vendor} [Потребна проверка на сметка]", 'debit' => $subtotal,    'credit' => 0],
-                // ДОЛЖИ: Влезен ДДВ (237) = ДДВ
-                ['account_code' => '237', 'description' => "Влезен ДДВ — {$vendor}",  'debit' => $vatAmount,   'credit' => 0],
-                // ПОБАРУВА: Обврски кон добавувачи (400) = Вкупно
-                ['account_code' => '400', 'description' => "Обврска — {$vendor}",      'debit' => 0,            'credit' => $totalAmount],
+                // ДОЛЖИ: Трошок (449 — Останати трошоци) = Основица
+                ['account_code' => '449', 'description' => "Основица — {$vendor} [Потребна проверка на сметка]", 'debit' => $subtotal,    'credit' => 0],
+                // ДОЛЖИ: Влезен ДДВ (130 — ДДВ побарување) = ДДВ
+                ['account_code' => '130', 'description' => "Влезен ДДВ — {$vendor}",  'debit' => $vatAmount,   'credit' => 0],
+                // ПОБАРУВА: Обврски кон добавувачи (220) = Вкупно
+                ['account_code' => '220', 'description' => "Обврска — {$vendor}",      'debit' => 0,            'credit' => $totalAmount],
             ];
             return [$lines, 20];
         }
 
         // InvoiceOut
         $lines = [
-            // ДОЛЖИ: Побарувања од купувачи (200) = Вкупно
-            ['account_code' => '200', 'description' => "Побарување — {$vendor}", 'debit' => $totalAmount, 'credit' => 0],
-            // ПОБАРУВА: Приходи од стока (630) = Основица
-            ['account_code' => '630', 'description' => "Приход — {$vendor}",     'debit' => 0,            'credit' => $subtotal],
-            // ПОБАРУВА: Обврски за ДДВ (450) = ДДВ
-            ['account_code' => '450', 'description' => "Излезен ДДВ — {$vendor}", 'debit' => 0,           'credit' => $vatAmount],
+            // ДОЛЖИ: Побарувања од купувачи (120) = Вкупно
+            ['account_code' => '120', 'description' => "Побарување — {$vendor}", 'debit' => $totalAmount, 'credit' => 0],
+            // ПОБАРУВА: Приходи за продадени производи и услуги (740) = Основица
+            ['account_code' => '740', 'description' => "Приход — {$vendor}",     'debit' => 0,            'credit' => $subtotal],
+            // ПОБАРУВА: Обврски за ДДВ (230) = ДДВ
+            ['account_code' => '230', 'description' => "Излезен ДДВ — {$vendor}", 'debit' => 0,           'credit' => $vatAmount],
         ];
         return [$lines, 30];
     }

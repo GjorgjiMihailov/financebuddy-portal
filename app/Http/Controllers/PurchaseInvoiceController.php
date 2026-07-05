@@ -220,11 +220,11 @@ class PurchaseInvoiceController extends Controller
             }
         }
 
-        // ДОЛЖИ: Трошок (549 – Останати оперативни трошоци) = Основица
+        // ДОЛЖИ: Трошок (449 – Останати трошоци на работењето) = Основица
         // Сметководителот треба да го прекнижи на точното конто
         $entry->lines()->create([
             'sort_order'    => $sort++,
-            'account_code'  => '549',
+            'account_code'  => '449',
             'kontragent_id' => $invoice->kontragent_id,
             'line_date'     => $date,
             'description'   => "{$ref} [Потребна проверка на сметка]",
@@ -232,11 +232,11 @@ class PurchaseInvoiceController extends Controller
             'credit'        => 0,
         ]);
 
-        // ДОЛЖИ: Влезен ДДВ (237) по стапка
+        // ДОЛЖИ: Влезен ДДВ (130 – ДДВ побарување) по стапка
         foreach ($vatByRate as $rate => $vatAmount) {
             $entry->lines()->create([
                 'sort_order'    => $sort++,
-                'account_code'  => '237',
+                'account_code'  => '130',
                 'kontragent_id' => $invoice->kontragent_id,
                 'line_date'     => $date,
                 'description'   => "{$ref} / ДДВ {$rate}%",
@@ -245,10 +245,10 @@ class PurchaseInvoiceController extends Controller
             ]);
         }
 
-        // ПОБАРУВА: Обврски кон добавувачи (400) = Вкупно
+        // ПОБАРУВА: Обврски кон добавувачи (220) = Вкупно
         $entry->lines()->create([
             'sort_order'    => $sort,
-            'account_code'  => '400',
+            'account_code'  => '220',
             'kontragent_id' => $invoice->kontragent_id,
             'line_date'     => $date,
             'description'   => $ref,
