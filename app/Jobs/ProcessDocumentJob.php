@@ -252,32 +252,87 @@ class ProcessDocumentJob implements ShouldQueue
             throw new \RuntimeException('Claude API error: ' . $response->body());
         }
 
-        $rawText = $response->json('content.0.text', '');
-        $data    = $this->parseJson($rawText);
+        $rawText  = $response->json('content.0.text', '');
+        $data     = $this->parseJson($rawText);
+        $invoices = $data['invoices'] ?? [];
 
+        if (empty($invoices)) {
+            throw new \RuntimeException('Claude returned no invoices.');
+        }
+
+        $inputTokens  = $response->json('usage.input_tokens', 0);
+        $outputTokens = $response->json('usage.output_tokens', 0);
+
+        $this->logAi($this->document->id, $durationMs, $inputTokens, $outputTokens);
+
+        if (count($invoices) === 1) {
+            // Single invoice — store directly on the uploaded document
+            $this->storeSingleInvoice($this->document, $invoices[0], $accounts);
+            $this->document->update([
+                'status'          => DocumentStatus::AiProcessed,
+                'ai_raw_response' => $data,
+                'ai_confidence'   => $data['confidence'] ?? null,
+                'ai_processed_at' => now(),
+            ]);
+        } else {
+            // Multiple invoices (пр. скенирани заедно) — создади посебен Document по фактура
+            foreach ($invoices as $inv) {
+                $label = $inv['document_number'] ?? (array_search($inv, $invoices) + 1);
+                $child = Document::create([
+                    'company_id'         => $this->document->company_id,
+                    'parent_document_id' => $this->document->id,
+                    'uploaded_by'        => $this->document->uploaded_by,
+                    'type'               => $this->document->type,
+                    'status'             => DocumentStatus::AiProcessed,
+                    'intake_channel'     => $this->document->intake_channel,
+                    'original_filename'  => "Фактура {$label} — {$this->document->original_filename}",
+                    'storage_path'       => $this->document->storage_path,
+                    'drive_file_id'      => $this->document->drive_file_id,
+                    'mime_type'          => $this->document->mime_type,
+                    'file_size'          => $this->document->file_size,
+                    'ai_confidence'      => $data['confidence'] ?? null,
+                    'ai_processed_at'    => now(),
+                ]);
+                $this->storeSingleInvoice($child, $inv, $accounts);
+            }
+
+            // Mark original as split (cannot be booked directly)
+            $this->document->update([
+                'status'          => DocumentStatus::Split,
+                'ai_raw_response' => $data,
+                'ai_processed_at' => now(),
+                'notes'           => 'PDF-от содржеше ' . count($invoices) . ' фактури — поделен во посебни документи.',
+            ]);
+        }
+
+        $this->cleanupLocalTemp();
+    }
+
+    private function storeSingleInvoice(Document $doc, array $inv, $accounts): void
+    {
         DocumentExtraction::create([
-            'document_id'       => $this->document->id,
-            'vendor_name'       => $data['vendor_name'] ?? null,
-            'vendor_tax_id'     => $data['vendor_tax_id'] ?? null,
-            'vendor_vat_number' => $data['vendor_vat_number'] ?? null,
-            'customer_name'     => $data['customer_name'] ?? null,
-            'customer_tax_id'   => $data['customer_tax_id'] ?? null,
-            'document_number'   => $data['document_number'] ?? null,
-            'document_date'     => $data['document_date'] ?? null,
-            'due_date'          => $data['due_date'] ?? null,
-            'currency'          => $data['currency'] ?? 'MKD',
-            'subtotal'          => $data['subtotal'] ?? 0,
-            'vat_amount'        => $data['vat_amount'] ?? 0,
-            'total_amount'      => $data['total_amount'] ?? 0,
+            'document_id'       => $doc->id,
+            'vendor_name'       => $inv['vendor_name'] ?? null,
+            'vendor_tax_id'     => $inv['vendor_tax_id'] ?? null,
+            'vendor_vat_number' => $inv['vendor_vat_number'] ?? null,
+            'customer_name'     => $inv['customer_name'] ?? null,
+            'customer_tax_id'   => $inv['customer_tax_id'] ?? null,
+            'document_number'   => $inv['document_number'] ?? null,
+            'document_date'     => $inv['document_date'] ?? null,
+            'due_date'          => $inv['due_date'] ?? null,
+            'currency'          => $inv['currency'] ?? 'MKD',
+            'subtotal'          => $inv['subtotal'] ?? 0,
+            'vat_amount'        => $inv['vat_amount'] ?? 0,
+            'total_amount'      => $inv['total_amount'] ?? 0,
         ]);
 
-        foreach ($data['line_items'] ?? [] as $i => $item) {
+        foreach ($inv['line_items'] ?? [] as $i => $item) {
             $acctCode = isset($item['suggested_account_code'])
                 ? $accounts->firstWhere('code', $item['suggested_account_code'])?->code
                 : null;
 
             DocumentLineItem::create([
-                'document_id'            => $this->document->id,
+                'document_id'            => $doc->id,
                 'sort_order'             => $i,
                 'description'            => $item['description'] ?? '',
                 'quantity'               => $item['quantity'] ?? null,
@@ -290,20 +345,6 @@ class ProcessDocumentJob implements ShouldQueue
                 'ai_confidence'          => $item['ai_confidence'] ?? null,
             ]);
         }
-
-        $inputTokens  = $response->json('usage.input_tokens', 0);
-        $outputTokens = $response->json('usage.output_tokens', 0);
-
-        $this->logAi($this->document->id, $durationMs, $inputTokens, $outputTokens);
-
-        $this->document->update([
-            'status'          => DocumentStatus::AiProcessed,
-            'ai_raw_response' => $data,
-            'ai_confidence'   => $data['confidence'] ?? null,
-            'ai_processed_at' => now(),
-        ]);
-
-        $this->cleanupLocalTemp();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -391,44 +432,52 @@ PROMPT;
 Македонски сметковен план (за предлагање сметки):
 {$accountsList}
 
-Извади ги следните податоци и врати ги во овој точен JSON формат:
+ВО PDF-ОТ МОЖЕ ДА ИМА ПОВЕЌЕ ФАКТУРИ (пр. неколку скенирани фактури споени во еден фајл, секоја на своја страница или неколку страници). Екстрактирај ГИ СИТЕ и врати ги во полето "invoices" (низа) — секоја фактура како посебен елемент.
+
+Врати го ТОЧНО овој JSON формат:
 
 {
   "confidence": 0.95,
-  "vendor_name": "Име на добавувачот",
-  "vendor_tax_id": "ЕМБС или даночен број на добавувач",
-  "vendor_vat_number": "ДДВ број на добавувач",
-  "customer_name": "Име на купувачот",
-  "customer_tax_id": "ЕМБС или даночен број на купувач",
-  "document_number": "број на документот",
-  "document_date": "YYYY-MM-DD",
-  "due_date": "YYYY-MM-DD или null",
-  "currency": "MKD",
-  "subtotal": 1000.00,
-  "vat_amount": 180.00,
-  "total_amount": 1180.00,
-  "line_items": [
+  "invoices": [
     {
-      "description": "опис на ставката",
-      "quantity": 1.0,
-      "unit": "ком",
-      "unit_price": 1000.00,
-      "vat_rate": 18.0,
+      "vendor_name": "Име на добавувачот",
+      "vendor_tax_id": "ЕМБС или даночен број на добавувач",
+      "vendor_vat_number": "ДДВ број на добавувач",
+      "customer_name": "Име на купувачот",
+      "customer_tax_id": "ЕМБС или даночен број на купувач",
+      "document_number": "број на документот",
+      "document_date": "YYYY-MM-DD",
+      "due_date": "YYYY-MM-DD или null",
+      "currency": "MKD",
+      "subtotal": 1000.00,
       "vat_amount": 180.00,
       "total_amount": 1180.00,
-      "suggested_account_code": "401",
-      "ai_confidence": 0.90
+      "line_items": [
+        {
+          "description": "опис на ставката",
+          "quantity": 1.0,
+          "unit": "ком",
+          "unit_price": 1000.00,
+          "vat_rate": 18.0,
+          "vat_amount": 180.00,
+          "total_amount": 1180.00,
+          "suggested_account_code": "401",
+          "ai_confidence": 0.90
+        }
+      ]
     }
   ]
 }
 
 Правила:
-- confidence е твојата општа доверба во точноста (0.0-1.0)
-- За suggested_account_code — избери само кодови кои постојат во сметковниот план погоре
-- Ако некое поле не можеш да го прочиташ, стави null
-- Датумите мора да бидат во формат YYYY-MM-DD
-- Броевите мора да бидат децимали, не стрингови
-- Врати САМО JSON, без markdown, без објаснувања
+1. Секоја фактура во PDF-от → посебен елемент во "invoices" низата, дури и ако PDF-от содржи само една фактура (тогаш "invoices" има само 1 елемент)
+2. НЕ мешај ставки од различни фактури во еден елемент — секоја фактура си ги има само своите ставки
+3. confidence е твојата општа доверба во точноста на целото извлекување (0.0-1.0)
+4. За suggested_account_code — избери само кодови кои постојат во сметковниот план погоре
+5. Ако некое поле не можеш да го прочиташ, стави null
+6. Датумите мора да бидат во формат YYYY-MM-DD
+7. Броевите мора да бидат децимали, не стрингови
+8. Врати САМО JSON, без markdown, без објаснувања
 PROMPT;
     }
 
