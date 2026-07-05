@@ -267,7 +267,7 @@ class ReportController extends Controller
 
     private function periodParams(Request $request): array
     {
-        $year = date('Y');
+        $year = session('current_year', date('Y'));
 
         return [
             $request->query('from', "{$year}-01-01"),

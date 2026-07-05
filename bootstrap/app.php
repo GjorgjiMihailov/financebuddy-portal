@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'company.selected' => \App\Http\Middleware\EnsureCompanySelected::class,
+            'year.selected'    => \App\Http\Middleware\EnsureYearSelected::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

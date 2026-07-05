@@ -36,6 +36,7 @@ const props = defineProps<{
     suggestedGroupCode: number | null;
     defaultDescription: string;
     suggestedKontragent: { id: number; name: string } | null;
+    currentYear: number;
 }>();
 
 defineOptions({
@@ -52,7 +53,7 @@ const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 
 const form = useForm({
     group_code:       props.suggestedGroupCode ?? null as number | null,
     description:      props.defaultDescription || '',
-    entry_date:       props.document.extraction?.document_date ?? new Date().toISOString().slice(0, 10),
+    entry_date:       props.document.extraction?.document_date ?? `${props.currentYear}-01-01`,
     reference:        props.document.extraction?.document_number ?? '',
     kontragent_id:    props.suggestedKontragent?.id ?? null as number | null,
     sequence_number:  null as number | null,

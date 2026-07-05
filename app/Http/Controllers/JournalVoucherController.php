@@ -19,7 +19,7 @@ class JournalVoucherController extends Controller
     public function index(Request $request): Response
     {
         $companyId = $this->currentCompanyId($request);
-        $year      = (int) ($request->query('year', date('Y')));
+        $year      = (int) ($request->query('year', session('current_year', date('Y'))));
         $groupCode = $request->query('group');
 
         $groups = JournalGroup::orderBy('code')->get()->map(function ($g) use ($companyId, $year) {
@@ -74,7 +74,7 @@ class JournalVoucherController extends Controller
     {
         $direction  = (string) $request->query('direction', 'first');
         $groupCode  = (int) $request->query('group_code');
-        $year       = (int) $request->query('year', date('Y'));
+        $year       = (int) $request->query('year', session('current_year', date('Y')));
         $companyId  = (int) $request->query('company_id');
         $currentSeq = $request->query('current_seq') ? (int) $request->query('current_seq') : null;
 

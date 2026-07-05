@@ -18,22 +18,27 @@ use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\YearContextController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
 
-// ── Избор на обврзник — без company.selected (иначе бесконечен redirect) ────
+// ── Избор на обврзник/година — без company.selected/year.selected (иначе бесконечен redirect) ────
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('select-company', [CompanyContextController::class, 'select'])->name('company.select');
     Route::post('select-company', [CompanyContextController::class, 'store'])->name('company.store');
     Route::post('clear-company', [CompanyContextController::class, 'clear'])->name('company.clear');
 
+    Route::get('select-year', [YearContextController::class, 'select'])->name('year.select');
+    Route::post('select-year', [YearContextController::class, 'store'])->name('year.store');
+    Route::post('clear-year', [YearContextController::class, 'clear'])->name('year.clear');
+
     // Exchange rate API (без company.selected — само auth)
     Route::get('api/exchange-rate', [ExchangeRateController::class, 'show'])->name('exchange-rate');
 });
 
-// ── Сите останати рути — со company.selected middleware ──────────────────────
-Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
+// ── Сите останати рути — со company.selected + year.selected middleware ──────
+Route::middleware(['auth', 'verified', 'company.selected', 'year.selected'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
     // ── Companies ─────────────────────────────────────────────────────────────

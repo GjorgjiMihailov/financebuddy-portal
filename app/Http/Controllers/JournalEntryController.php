@@ -105,6 +105,7 @@ class JournalEntryController extends Controller
             'suggestedGroupCode'  => $suggestedGroupCode,
             'defaultDescription'  => $defaultDescription,
             'suggestedKontragent' => $this->suggestKontragent($document),
+            'currentYear'         => (int) session('current_year', date('Y')),
         ]);
     }
 

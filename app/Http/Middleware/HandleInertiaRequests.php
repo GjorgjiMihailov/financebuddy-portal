@@ -59,6 +59,7 @@ class HandleInertiaRequests extends Middleware
                 }
                 return null;
             },
+            'current_year' => fn () => auth()->check() ? session('current_year') : null,
         ];
     }
 }
