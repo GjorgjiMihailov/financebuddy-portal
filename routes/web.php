@@ -12,6 +12,7 @@ use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\JournalGroupController;
 use App\Http\Controllers\JournalVoucherController;
 use App\Http\Controllers\KontragentController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\WarehouseMovementController;
 use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SalesInvoiceController;
@@ -99,8 +100,15 @@ Route::middleware(['auth', 'verified', 'company.selected'])->group(function () {
     Route::inertia('payroll', 'payroll/Index')->name('payroll.index');
     Route::inertia('hr', 'hr/Index')->name('hr.index');
 
-    // ── Извештаи (placeholder) ────────────────────────────────────────────────
+    // ── Извештаи ───────────────────────────────────────────────────────────────
     Route::inertia('reports', 'reports/Index')->name('reports.index');
+    Route::get('reports/gross-balance', [ReportController::class, 'grossBalance'])->name('reports.gross-balance');
+    Route::get('reports/gross-balance-by-company', [ReportController::class, 'grossBalanceByCompany'])->name('reports.gross-balance-by-company');
+    Route::get('reports/gross-balance-synthetic', [ReportController::class, 'grossBalanceSynthetic'])->name('reports.gross-balance-synthetic');
+    Route::get('reports/cumulative', [ReportController::class, 'cumulative'])->name('reports.cumulative');
+    Route::get('reports/ledger-account-company', [ReportController::class, 'ledgerAccountCompany'])->name('reports.ledger-account-company');
+    Route::get('reports/ledger-account', [ReportController::class, 'ledgerAccount'])->name('reports.ledger-account');
+    Route::get('reports/ledger-company', [ReportController::class, 'ledgerCompany'])->name('reports.ledger-company');
 });
 
 require __DIR__.'/settings.php';
