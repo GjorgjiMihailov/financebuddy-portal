@@ -109,31 +109,56 @@ class JournalEntryController extends Controller
     {
         $ext = $document->extraction;
 
-        // ── Денарски / девизен извод ────────────────────────────────────────
+        // ── Банкарски извод ─────────────────────────────────────────────────
         if ($document->type === \App\Enums\DocumentType::BankStatement) {
             $bankAccount = '271'; // Тековна сметка во банка (денари)
 
-            // Pair each OCR line-item with the bank account
             $lineItems = $document->lineItems
-                ->filter(fn ($i) => $i->confirmed_account_code || $i->suggested_account_code || $i->description);
+                ->filter(fn ($i) => (float)($i->debit ?? 0) > 0 || (float)($i->credit ?? 0) > 0);
 
             if ($lineItems->isNotEmpty()) {
                 $lines = [];
+                $sort  = 0;
                 foreach ($lineItems as $item) {
-                    $counter = $item->confirmed_account_code ?? $item->suggested_account_code;
-                    $desc    = $item->description ?? '';
-                    $lines[] = ['account_code' => $bankAccount, 'description' => $desc, 'debit' => 0, 'credit' => 0];
-                    if ($counter) {
-                        $lines[] = ['account_code' => $counter,     'description' => $desc, 'debit' => 0, 'credit' => 0];
+                    $counter  = $item->confirmed_account_code ?? $item->suggested_account_code ?? '200';
+                    $desc     = $item->description ?? '';
+                    $ref      = $item->reference ? " [{$item->reference}]" : '';
+                    $debitAmt = (float)($item->debit  ?? 0);
+                    $creditAmt= (float)($item->credit ?? 0);
+
+                    if ($creditAmt > 0) {
+                        // Пари влегуваат → ДОЛЖИ 271, ПОБАРУВА контрапартија
+                        $lines[] = ['account_code' => $bankAccount, 'description' => $desc . $ref, 'debit' => $creditAmt, 'credit' => 0, 'sort_order' => $sort++];
+                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => 0, 'credit' => $creditAmt, 'sort_order' => $sort++];
+                    } elseif ($debitAmt > 0) {
+                        // Пари излегуваат → ДОЛЖИ контрапартија, ПОБАРУВА 271
+                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => $debitAmt, 'credit' => 0, 'sort_order' => $sort++];
+                        $lines[] = ['account_code' => $bankAccount, 'description' => $desc . $ref, 'debit' => 0, 'credit' => $debitAmt, 'sort_order' => $sort++];
                     }
                 }
-                return [$lines, 10]; // group 10 = Денарски изводи
+                if (!empty($lines)) {
+                    return [$lines, 10];
+                }
             }
 
-            // Fallback template
+            // Fallback: користи total_debit/total_credit од extraction ако нема line items
+            if ($ext && ((float)($ext->total_debit ?? 0) > 0 || (float)($ext->total_credit ?? 0) > 0)) {
+                $lines = [];
+                if ((float)($ext->total_credit ?? 0) > 0) {
+                    $lines[] = ['account_code' => $bankAccount, 'description' => 'Вкупно примено', 'debit' => (float)$ext->total_credit, 'credit' => 0];
+                    $lines[] = ['account_code' => '120',        'description' => 'Побарувања',     'debit' => 0, 'credit' => (float)$ext->total_credit];
+                }
+                if ((float)($ext->total_debit ?? 0) > 0) {
+                    $lines[] = ['account_code' => '400',        'description' => 'Вкупно платено', 'debit' => (float)$ext->total_debit, 'credit' => 0];
+                    $lines[] = ['account_code' => $bankAccount, 'description' => 'Платено',        'debit' => 0, 'credit' => (float)$ext->total_debit];
+                }
+                return [$lines, 10];
+            }
+
+            // Ultimate fallback — empty template
             return [[
-                ['account_code' => $bankAccount, 'description' => 'Денарска сметка',  'debit' => 0, 'credit' => 0],
-                ['account_code' => '200',         'description' => 'Контрапартија',     'debit' => 0, 'credit' => 0],
+                ['account_code' => $bankAccount, 'description' => 'Денарска сметка', 'debit' => 0, 'credit' => 0],
+                ['account_code' => '200',         'description' => 'Контрапартија',   'debit' => 0, 'credit' => 0],
             ], 10];
         }
 

@@ -17,6 +17,7 @@ class Document extends Model
 
     protected $fillable = [
         'company_id',
+        'parent_document_id',
         'uploaded_by',
         'type',
         'status',
@@ -38,14 +39,14 @@ class Document extends Model
     protected function casts(): array
     {
         return [
-            'type' => DocumentType::class,
-            'status' => DocumentStatus::class,
-            'intake_channel' => IntakeChannel::class,
+            'type'            => DocumentType::class,
+            'status'          => DocumentStatus::class,
+            'intake_channel'  => IntakeChannel::class,
             'ai_raw_response' => 'array',
-            'ai_confidence' => 'float',
+            'ai_confidence'   => 'float',
             'ai_processed_at' => 'datetime',
-            'verified_at' => 'datetime',
-            'booked_at' => 'datetime',
+            'verified_at'     => 'datetime',
+            'booked_at'       => 'datetime',
         ];
     }
 
@@ -82,5 +83,15 @@ class Document extends Model
     public function aiLogs(): HasMany
     {
         return $this->hasMany(AiProcessingLog::class);
+    }
+
+    public function parentDocument(): BelongsTo
+    {
+        return $this->belongsTo(Document::class, 'parent_document_id');
+    }
+
+    public function childDocuments(): HasMany
+    {
+        return $this->hasMany(Document::class, 'parent_document_id');
     }
 }
