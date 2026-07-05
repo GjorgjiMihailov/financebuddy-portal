@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { Plus, Search, Pencil, Trash2, X, Building2 } from '@lucide/vue';
+import { Plus, Search, Pencil, Trash2, X, Building2, ListPlus } from '@lucide/vue';
 import { ref, computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -111,6 +111,39 @@ function submitCreate() {
     });
 }
 
+// ─── Bulk-add dialog ─────────────────────────────────────────────────────────
+const showBulk = ref(false);
+
+const emptyBulkRow = () => ({
+    name: '', edb: '', embs: '', address: '', phone: '', email: '',
+    type: 'both' as 'client' | 'supplier' | 'both', is_vat_payer: false,
+});
+
+const bulkForm = useForm({
+    rows: [emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow()],
+});
+
+function addBulkRow() {
+    bulkForm.rows.push(emptyBulkRow());
+}
+
+function removeBulkRow(i: number) {
+    if (bulkForm.rows.length > 1) bulkForm.rows.splice(i, 1);
+}
+
+function submitBulk() {
+    // Испрати ги само редовите со внесен назив
+    bulkForm.transform((data) => ({
+        rows: data.rows.filter((r) => r.name.trim() !== ''),
+    })).post('/kontragenti-bulk', {
+        onSuccess: () => {
+            showBulk.value = false;
+            bulkForm.reset();
+            bulkForm.rows = [emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow()];
+        },
+    });
+}
+
 // ─── Edit dialog ─────────────────────────────────────────────────────────────
 const showEdit    = ref(false);
 const editTarget  = ref<Kontragent | null>(null);
@@ -171,10 +204,16 @@ function deleteKontragent(k: Kontragent) {
                     {{ kontragenti.total }} деловни партнери (клиенти / добавувачи)
                 </p>
             </div>
-            <Button @click="showCreate = true">
-                <Plus class="mr-2 size-4" />
-                Нов контрагент
-            </Button>
+            <div class="flex gap-2">
+                <Button variant="outline" @click="showBulk = true">
+                    <ListPlus class="mr-2 size-4" />
+                    Масовен внес
+                </Button>
+                <Button @click="showCreate = true">
+                    <Plus class="mr-2 size-4" />
+                    Нов контрагент
+                </Button>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -358,6 +397,86 @@ function deleteKontragent(k: Kontragent) {
                 <Button variant="outline" @click="showCreate = false">Откажи</Button>
                 <Button :disabled="createForm.processing" @click="submitCreate">
                     {{ createForm.processing ? 'Зачувување…' : 'Додај контрагент' }}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <!-- ─── Bulk-add Dialog ────────────────────────────────────────────────── -->
+    <Dialog v-model:open="showBulk">
+        <DialogContent class="max-w-5xl">
+            <DialogHeader>
+                <DialogTitle>Масовен внес на контрагенти</DialogTitle>
+            </DialogHeader>
+
+            <p class="text-sm text-muted-foreground">
+                Само <strong>Назив</strong> е задолжителен — останатите полиња се опционални. Празните редови се игнорираат.
+            </p>
+
+            <div class="max-h-[55vh] overflow-auto rounded-lg border">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-muted/95">
+                        <tr class="border-b">
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground">Назив *</th>
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground w-32">ЕДБ</th>
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground w-28">ЕМБС</th>
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground">Адреса</th>
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground w-32">Телефон</th>
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground w-40">Е-пошта</th>
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground w-32">Тип</th>
+                            <th class="px-2 py-2 text-center font-medium text-muted-foreground w-14">ДДВ</th>
+                            <th class="w-10" />
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(row, i) in bulkForm.rows" :key="i" class="border-b last:border-0">
+                            <td class="px-2 py-1"><Input v-model="row.name" class="h-8 text-sm" placeholder="Назив на фирма" /></td>
+                            <td class="px-2 py-1"><Input v-model="row.edb" class="h-8 text-sm" maxlength="13" placeholder="ЕДБ" /></td>
+                            <td class="px-2 py-1"><Input v-model="row.embs" class="h-8 text-sm" maxlength="7" placeholder="ЕМБС" /></td>
+                            <td class="px-2 py-1"><Input v-model="row.address" class="h-8 text-sm" placeholder="Адреса" /></td>
+                            <td class="px-2 py-1"><Input v-model="row.phone" class="h-8 text-sm" placeholder="Телефон" /></td>
+                            <td class="px-2 py-1"><Input v-model="row.email" type="email" class="h-8 text-sm" placeholder="Е-пошта" /></td>
+                            <td class="px-2 py-1">
+                                <select
+                                    v-model="row.type"
+                                    class="h-8 w-full rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                >
+                                    <option value="client">Клиент</option>
+                                    <option value="supplier">Добавувач</option>
+                                    <option value="both">Двете</option>
+                                </select>
+                            </td>
+                            <td class="px-2 py-1 text-center">
+                                <Checkbox v-model:checked="row.is_vat_payer" />
+                            </td>
+                            <td class="px-2 py-1">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    class="size-7 text-muted-foreground hover:text-destructive"
+                                    :disabled="bulkForm.rows.length <= 1"
+                                    @click="removeBulkRow(i)"
+                                >
+                                    <Trash2 class="size-3.5" />
+                                </Button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <Button type="button" variant="ghost" size="sm" class="w-fit" @click="addBulkRow">
+                <Plus class="mr-1 size-3" />
+                Додај ред
+            </Button>
+
+            <p v-if="(bulkForm.errors as any).rows" class="text-xs text-destructive">{{ (bulkForm.errors as any).rows }}</p>
+
+            <DialogFooter>
+                <Button variant="outline" @click="showBulk = false">Откажи</Button>
+                <Button :disabled="bulkForm.processing" @click="submitBulk">
+                    {{ bulkForm.processing ? 'Зачувување…' : 'Зачувај ги сите' }}
                 </Button>
             </DialogFooter>
         </DialogContent>

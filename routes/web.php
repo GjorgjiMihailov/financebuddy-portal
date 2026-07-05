@@ -82,6 +82,7 @@ Route::middleware(['auth', 'verified', 'company.selected', 'year.selected'])->gr
 
     // ── Контрагенти ───────────────────────────────────────────────────────────
     Route::resource('kontragenti', KontragentController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::post('kontragenti-bulk', [KontragentController::class, 'storeBulk'])->name('kontragenti.store-bulk');
     Route::get('companies/{company}/kontragenti', [KontragentController::class, 'forCompany'])->name('companies.kontragenti');
     Route::get('companies/{company}/items', [ItemController::class, 'forCompany'])->name('companies.items');
 

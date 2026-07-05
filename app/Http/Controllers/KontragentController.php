@@ -7,6 +7,7 @@ use App\Models\Kontragent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,7 +36,7 @@ class KontragentController extends Controller
         $validated = $request->validate([
             'company_id'  => ['required', 'exists:companies,id'],
             'name'        => ['required', 'string', 'max:255'],
-            'edb'         => ['required', 'string', 'size:13', 'regex:/^\d{13}$/'],
+            'edb'         => ['nullable', 'string', 'size:13', 'regex:/^\d{13}$/'],
             'embs'        => ['nullable', 'string', 'size:7', 'regex:/^\d{7}$/'],
             'address'     => ['nullable', 'string', 'max:500'],
             'phone'       => ['nullable', 'string', 'max:50'],
@@ -52,11 +53,51 @@ class KontragentController extends Controller
         return back();
     }
 
+    public function storeBulk(Request $request): RedirectResponse
+    {
+        $companyId = $this->currentCompanyId($request);
+
+        $validated = $request->validate([
+            'rows'                => ['required', 'array', 'min:1'],
+            'rows.*.name'         => ['required', 'string', 'max:255'],
+            'rows.*.edb'          => ['nullable', 'string', 'size:13', 'regex:/^\d{13}$/'],
+            'rows.*.embs'         => ['nullable', 'string', 'size:7', 'regex:/^\d{7}$/'],
+            'rows.*.address'      => ['nullable', 'string', 'max:500'],
+            'rows.*.phone'        => ['nullable', 'string', 'max:50'],
+            'rows.*.email'        => ['nullable', 'email', 'max:255'],
+            'rows.*.is_vat_payer' => ['boolean'],
+            'rows.*.type'         => ['nullable', 'in:client,supplier,both'],
+        ]);
+
+        $count = DB::transaction(function () use ($validated, $companyId) {
+            foreach ($validated['rows'] as $row) {
+                Kontragent::create([
+                    'company_id'   => $companyId,
+                    'name'         => $row['name'],
+                    'edb'          => $row['edb'] ?? null,
+                    'embs'         => $row['embs'] ?? null,
+                    'address'      => $row['address'] ?? null,
+                    'phone'        => $row['phone'] ?? null,
+                    'email'        => $row['email'] ?? null,
+                    'is_vat_payer' => $row['is_vat_payer'] ?? false,
+                    'type'         => $row['type'] ?? 'both',
+                    'is_active'    => true,
+                ]);
+            }
+
+            return count($validated['rows']);
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Додадени {$count} контрагенти."]);
+
+        return back();
+    }
+
     public function update(Request $request, Kontragent $kontragent): RedirectResponse
     {
         $validated = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
-            'edb'         => ['required', 'string', 'size:13', 'regex:/^\d{13}$/'],
+            'edb'         => ['nullable', 'string', 'size:13', 'regex:/^\d{13}$/'],
             'embs'        => ['nullable', 'string', 'size:7', 'regex:/^\d{7}$/'],
             'address'     => ['nullable', 'string', 'max:500'],
             'phone'       => ['nullable', 'string', 'max:50'],
