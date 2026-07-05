@@ -20,12 +20,15 @@ class StoreJournalEntryRequest extends FormRequest
             'description'        => ['required', 'string', 'max:500'],
             'entry_date'         => ['required', 'date'],
             'reference'          => ['nullable', 'string', 'max:100'],
+            'kontragent_id'      => ['nullable', 'integer', 'exists:kontragenti,id'],
             'post_immediately'   => ['boolean'],
             'lines'              => ['required', 'array', 'min:2'],
             'lines.*.account_code' => ['required', 'string', 'exists:chart_of_accounts,code'],
             'lines.*.debit'      => ['required', 'numeric', 'min:0'],
             'lines.*.credit'     => ['required', 'numeric', 'min:0'],
             'lines.*.description' => ['nullable', 'string', 'max:255'],
+            'lines.*.kontragent_id'     => ['nullable', 'integer', 'exists:kontragenti,id'],
+            'lines.*.closing_reference' => ['nullable', 'string', 'max:100'],
         ];
     }
 

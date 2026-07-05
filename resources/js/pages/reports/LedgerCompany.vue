@@ -5,7 +5,7 @@ import { formatDate } from '@/lib/formatDate';
 import { formatNumber } from '@/lib/formatNumber';
 import ReportHeader from '@/components/reports/ReportHeader.vue';
 import ReportToolbar from '@/components/reports/ReportToolbar.vue';
-import EntitySearchSelect from '@/components/reports/EntitySearchSelect.vue';
+import EntitySearchSelect from '@/components/EntitySearchSelect.vue';
 
 defineOptions({
     layout: {

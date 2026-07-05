@@ -32,6 +32,22 @@ class JournalGroupController extends Controller
         $groupCode = (int) $request->query('group_code');
         $year      = (int) $request->query('year');
         $companyId = (int) $request->query('company_id');
+        $date      = $request->query('date');
+
+        if (in_array($groupCode, [20, 30], true) && $date) {
+            // Влезни/Излезни фактури — консолидирано по месец: покажи го постојниот
+            // налог за тој месец (ако веќе постои) наместо секогаш нов број.
+            $seq    = (int) date('n', strtotime($date));
+            $exists = JournalEntry::where('group_code', $groupCode)
+                ->where('year', $year)
+                ->where('company_id', $companyId)
+                ->where('sequence_number', $seq)
+                ->exists();
+
+            $voucherNumber = $groupCode . '-' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+
+            return response()->json(['next_sequence' => $seq, 'voucher_number' => $voucherNumber, 'exists' => $exists]);
+        }
 
         $seq = (JournalEntry::where('group_code', $groupCode)
             ->where('year', $year)
@@ -40,7 +56,7 @@ class JournalGroupController extends Controller
 
         $voucherNumber = $groupCode . '-' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
 
-        return response()->json(['next_sequence' => $seq, 'voucher_number' => $voucherNumber]);
+        return response()->json(['next_sequence' => $seq, 'voucher_number' => $voucherNumber, 'exists' => false]);
     }
 
     public function store(Request $request): RedirectResponse

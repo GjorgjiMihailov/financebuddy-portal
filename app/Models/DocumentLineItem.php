@@ -15,6 +15,8 @@ class DocumentLineItem extends Model
         'debit', 'credit', 'transaction_date', 'reference',
         // Common
         'suggested_account_code', 'confirmed_account_code', 'ai_confidence',
+        // Reconciliation suggestions (bank statements)
+        'suggested_kontragent_id', 'suggested_closing_reference',
     ];
 
     protected function casts(): array
@@ -45,5 +47,10 @@ class DocumentLineItem extends Model
     public function confirmedAccount(): BelongsTo
     {
         return $this->belongsTo(ChartOfAccount::class, 'confirmed_account_code', 'code');
+    }
+
+    public function suggestedKontragent(): BelongsTo
+    {
+        return $this->belongsTo(Kontragent::class, 'suggested_kontragent_id');
     }
 }

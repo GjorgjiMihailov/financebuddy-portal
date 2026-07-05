@@ -3,6 +3,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Plus, Trash2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
+import EntitySearchSelect from '@/components/EntitySearchSelect.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,10 +28,14 @@ const CLASS_LABELS: Record<string, string> = {
 const props = defineProps<{
     document: DocumentFile;
     accounts: AccountGroup;
-    prefillLines: { account_code: string; description: string; debit: number; credit: number }[];
+    prefillLines: {
+        account_code: string; description: string; debit: number; credit: number;
+        kontragent_id?: number | null; kontragent_name?: string | null; closing_reference?: string | null;
+    }[];
     journalGroups: JournalGroup[];
     suggestedGroupCode: number | null;
     defaultDescription: string;
+    suggestedKontragent: { id: number; name: string } | null;
 }>();
 
 defineOptions({
@@ -42,19 +47,34 @@ defineOptions({
     },
 });
 
-const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 0 });
+const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 0, kontragent_id: null as number | null, kontragent_name: '', closing_reference: '' });
 
 const form = useForm({
     group_code:       props.suggestedGroupCode ?? null as number | null,
     description:      props.defaultDescription || '',
     entry_date:       props.document.extraction?.document_date ?? new Date().toISOString().slice(0, 10),
     reference:        props.document.extraction?.document_number ?? '',
+    kontragent_id:    props.suggestedKontragent?.id ?? null as number | null,
     sequence_number:  null as number | null,
     post_immediately: false,
     lines:            props.prefillLines.length >= 2
-        ? props.prefillLines.map(l => ({ ...l }))
+        ? props.prefillLines.map(l => ({
+            account_code: l.account_code,
+            description: l.description,
+            debit: l.debit,
+            credit: l.credit,
+            kontragent_id: l.kontragent_id ?? null,
+            kontragent_name: l.kontragent_name ?? '',
+            closing_reference: l.closing_reference ?? '',
+        }))
         : [emptyLine(), emptyLine()],
 });
+
+const kontragentLabel = ref(props.suggestedKontragent?.name ?? '');
+
+function onKontragentSelect(item: any) {
+    form.kontragent_id = item?.id ?? null;
+}
 
 const nextVoucherPreview = ref<string | null>(null);
 
@@ -64,7 +84,7 @@ async function loadNextVoucher() {
         return;
     }
     const year = new Date(form.entry_date).getFullYear();
-    const res = await fetch(`/api/journal-groups/next-sequence?group_code=${form.group_code}&year=${year}&company_id=${props.document.company_id}`);
+    const res = await fetch(`/api/journal-groups/next-sequence?group_code=${form.group_code}&year=${year}&company_id=${props.document.company_id}&date=${form.entry_date}`);
     if (res.ok) {
         const data = await res.json();
         nextVoucherPreview.value = data.voucher_number;
@@ -154,6 +174,15 @@ function submitPost() {
                     />
                 </div>
                 <div class="grid gap-2">
+                    <Label>Фирма (партнер)</Label>
+                    <EntitySearchSelect
+                        endpoint="/api/partners/search"
+                        :initial-label="kontragentLabel"
+                        placeholder="Име, ЕДБ"
+                        @select="onKontragentSelect"
+                    />
+                </div>
+                <div class="grid gap-2">
                     <Label for="group_code">Група налог</Label>
                     <select
                         id="group_code"
@@ -198,6 +227,8 @@ function submitPost() {
                             <tr class="border-b bg-muted/50">
                                 <th class="px-3 py-2 text-left font-medium text-muted-foreground w-56">Сметка</th>
                                 <th class="px-3 py-2 text-left font-medium text-muted-foreground">Опис</th>
+                                <th class="px-3 py-2 text-left font-medium text-muted-foreground w-48">Фирма</th>
+                                <th class="px-3 py-2 text-left font-medium text-muted-foreground w-36">Затворање</th>
                                 <th class="px-3 py-2 text-right font-medium text-muted-foreground w-32">Дебит</th>
                                 <th class="px-3 py-2 text-right font-medium text-muted-foreground w-32">Кредит</th>
                                 <th class="w-10" />
@@ -239,6 +270,21 @@ function submitPost() {
                                     />
                                 </td>
                                 <td class="px-3 py-2">
+                                    <EntitySearchSelect
+                                        endpoint="/api/partners/search"
+                                        :initial-label="line.kontragent_name"
+                                        placeholder="—"
+                                        @select="(item: any) => { line.kontragent_id = item?.id ?? null; line.kontragent_name = item?.name ?? ''; }"
+                                    />
+                                </td>
+                                <td class="px-3 py-2">
+                                    <Input
+                                        v-model="line.closing_reference"
+                                        placeholder="нпр. ф-ра: 29/23"
+                                        class="h-8 text-sm"
+                                    />
+                                </td>
+                                <td class="px-3 py-2">
                                     <Input
                                         v-model.number="line.debit"
                                         type="number"
@@ -274,7 +320,7 @@ function submitPost() {
                         </tbody>
                         <tfoot>
                             <tr class="border-t bg-muted/30">
-                                <td colspan="2" class="px-3 py-2">
+                                <td colspan="4" class="px-3 py-2">
                                     <Button type="button" variant="ghost" size="sm" class="h-7 text-xs" @click="addLine">
                                         <Plus class="mr-1 size-3" />
                                         Додај ред

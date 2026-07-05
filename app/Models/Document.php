@@ -80,6 +80,11 @@ class Document extends Model
         return $this->hasMany(JournalEntry::class);
     }
 
+    public function journalEntryLines(): HasMany
+    {
+        return $this->hasMany(JournalEntryLine::class);
+    }
+
     public function aiLogs(): HasMany
     {
         return $this->hasMany(AiProcessingLog::class);

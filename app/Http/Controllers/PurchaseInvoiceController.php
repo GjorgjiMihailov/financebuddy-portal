@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\JournalEntryStatus;
 use App\Models\Item;
 use App\Models\JournalEntry;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceLine;
 use App\Models\Warehouse;
 use App\Models\WarehouseMovement;
+use App\Services\MonthlyJournalResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -154,56 +154,16 @@ class PurchaseInvoiceController extends Controller
 
     private function addToMonthlyJournal(PurchaseInvoice $invoice, int $userId, ?int $targetEntryId = null, ?string $voucherNumber = null): void
     {
-        $date      = $invoice->date;
-        $year      = (int) date('Y', strtotime($date));
-        $month     = (int) date('n', strtotime($date));
-        $monthName = ['Јануари','Февруари','Март','Април','Мај','Јуни',
-                      'Јули','Август','Септември','Октомври','Ноември','Декември'][$month - 1];
+        $date = $invoice->date;
 
         if ($targetEntryId) {
             $entry = JournalEntry::lockForUpdate()->findOrFail($targetEntryId);
         } elseif ($voucherNumber && preg_match('/^(\d+)-(\d+)$/', $voucherNumber, $m)) {
-            $vGroupCode = (int) $m[1];
-            $vSeqNum    = (int) $m[2];
-            $entry = JournalEntry::where('company_id', $invoice->company_id)
-                ->where('group_code', $vGroupCode)
-                ->where('year', $year)
-                ->where('sequence_number', $vSeqNum)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $entry) {
-                $entry = JournalEntry::create([
-                    'company_id'      => $invoice->company_id,
-                    'group_code'      => $vGroupCode,
-                    'year'            => $year,
-                    'sequence_number' => $vSeqNum,
-                    'entry_date'      => $date,
-                    'description'     => "Влезни фактури – {$monthName} {$year}",
-                    'status'          => JournalEntryStatus::Draft,
-                    'created_by'      => $userId,
-                ]);
-            }
+            $entry = MonthlyJournalResolver::resolveExplicit(
+                $invoice->company_id, (int) $m[1], (int) $m[2], $date, 'Влезни фактури', $userId
+            );
         } else {
-            $entry = JournalEntry::where('company_id', $invoice->company_id)
-                ->where('group_code', 20)
-                ->where('year', $year)
-                ->where('sequence_number', $month)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $entry) {
-                $entry = JournalEntry::create([
-                    'company_id'      => $invoice->company_id,
-                    'group_code'      => 20,
-                    'year'            => $year,
-                    'sequence_number' => $month,
-                    'entry_date'      => $date,
-                    'description'     => "Влезни фактури – {$monthName} {$year}",
-                    'status'          => JournalEntryStatus::Draft,
-                    'created_by'      => $userId,
-                ]);
-            }
+            $entry = MonthlyJournalResolver::resolve($invoice->company_id, 20, $date, 'Влезни фактури', $userId);
         }
 
         $invoice->loadMissing(['kontragent', 'lines']);

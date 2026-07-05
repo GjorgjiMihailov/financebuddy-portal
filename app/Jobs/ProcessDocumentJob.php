@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\AiProcessingStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentType;
+use App\Enums\JournalEntryStatus;
 use App\Models\AiProcessingLog;
 use App\Models\ChartOfAccount;
 use App\Models\Document;
@@ -12,6 +13,7 @@ use App\Models\DocumentExtraction;
 use App\Models\DocumentLineItem;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -95,7 +97,9 @@ class ProcessDocumentJob implements ShouldQueue
 
     private function processBankStatement(array $contentBlock, $accounts, string $accountsList, $startedAt): void
     {
-        $response = $this->callClaude($contentBlock, $this->buildBankStatementPrompt($accountsList));
+        $openBalances = $this->openBalancesByPartner($this->document->company_id);
+
+        $response = $this->callClaude($contentBlock, $this->buildBankStatementPrompt($accountsList, $openBalances));
 
         $durationMs = (int) $startedAt->diffInMilliseconds(now());
 
@@ -118,7 +122,7 @@ class ProcessDocumentJob implements ShouldQueue
 
         if (count($statements) === 1) {
             // Single statement — store directly on the uploaded document
-            $this->storeSingleBankStatement($this->document, $statements[0], $accounts);
+            $this->storeSingleBankStatement($this->document, $statements[0], $accounts, $openBalances);
             $this->document->update([
                 'status'          => DocumentStatus::AiProcessed,
                 'ai_raw_response' => $data,
@@ -144,7 +148,7 @@ class ProcessDocumentJob implements ShouldQueue
                     'ai_confidence'      => $data['confidence'] ?? null,
                     'ai_processed_at'    => now(),
                 ]);
-                $this->storeSingleBankStatement($child, $stmt, $accounts);
+                $this->storeSingleBankStatement($child, $stmt, $accounts, $openBalances);
             }
 
             // Mark original as split (cannot be booked directly)
@@ -159,7 +163,7 @@ class ProcessDocumentJob implements ShouldQueue
         $this->cleanupLocalTemp();
     }
 
-    private function storeSingleBankStatement(Document $doc, array $stmt, $accounts): void
+    private function storeSingleBankStatement(Document $doc, array $stmt, $accounts, array $openBalances = []): void
     {
         DocumentExtraction::create([
             'document_id'     => $doc->id,
@@ -181,19 +185,57 @@ class ProcessDocumentJob implements ShouldQueue
                 ? $accounts->firstWhere('code', $tx['suggested_account_code'])?->code
                 : null;
 
+            // Match Claude's suggested partner name back to one of the candidates
+            // we fed it (never a free DB-wide search) so the suggestion is always
+            // an actual open receivable/payable — Тамара confirms/changes it.
+            $matchedName    = $tx['matched_kontragent_name'] ?? null;
+            $matchedBalance = $matchedName
+                ? collect($openBalances)->first(fn ($b) => mb_strtolower($b['name']) === mb_strtolower($matchedName))
+                : null;
+
             DocumentLineItem::create([
-                'document_id'            => $doc->id,
-                'sort_order'             => $i,
-                'description'            => $tx['description'] ?? '',
-                'reference'              => $tx['reference'] ?? null,
-                'transaction_date'       => $tx['date'] ?? null,
-                'debit'                  => $tx['debit'] ?? 0,
-                'credit'                 => $tx['credit'] ?? 0,
-                'total_amount'           => max((float)($tx['debit'] ?? 0), (float)($tx['credit'] ?? 0)),
-                'suggested_account_code' => $acctCode,
-                'ai_confidence'          => $tx['ai_confidence'] ?? null,
+                'document_id'                 => $doc->id,
+                'sort_order'                  => $i,
+                'description'                 => $tx['description'] ?? '',
+                'reference'                   => $tx['reference'] ?? null,
+                'transaction_date'            => $tx['date'] ?? null,
+                'debit'                       => $tx['debit'] ?? 0,
+                'credit'                      => $tx['credit'] ?? 0,
+                'total_amount'                => max((float)($tx['debit'] ?? 0), (float)($tx['credit'] ?? 0)),
+                'suggested_account_code'      => $acctCode,
+                'ai_confidence'               => $tx['ai_confidence'] ?? null,
+                'suggested_kontragent_id'     => $matchedBalance['kontragent_id'] ?? null,
+                'suggested_closing_reference' => $matchedBalance ? ($tx['matched_reference'] ?? null) : null,
             ]);
         }
+    }
+
+    /**
+     * Open (non-zero) receivable/payable balances per partner, for accounts
+     * 120 (Побарувања) and 220 (Обврски). Fed to Claude as match candidates
+     * when reconciling a bank statement — keeps AI suggestions constrained
+     * to real, currently-open balances instead of a free-form name guess.
+     */
+    private function openBalancesByPartner(int $companyId): array
+    {
+        return DB::table('journal_entry_lines as jel')
+            ->join('journal_entries as je', 'je.id', '=', 'jel.journal_entry_id')
+            ->join('kontragenti as k', 'k.id', '=', 'jel.kontragent_id')
+            ->where('je.company_id', $companyId)
+            ->where('je.status', JournalEntryStatus::Posted->value)
+            ->whereIn('jel.account_code', ['120', '220'])
+            ->selectRaw('k.id, k.name, k.edb, jel.account_code, SUM(jel.debit) as debit, SUM(jel.credit) as credit')
+            ->groupBy('k.id', 'k.name', 'k.edb', 'jel.account_code')
+            ->havingRaw('ABS(SUM(jel.debit) - SUM(jel.credit)) > 0.01')
+            ->get()
+            ->map(fn ($r) => [
+                'kontragent_id' => $r->id,
+                'name'          => $r->name,
+                'edb'           => $r->edb,
+                'account_code'  => $r->account_code,
+                'balance'       => round((float) $r->debit - (float) $r->credit, 2),
+            ])
+            ->all();
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -268,13 +310,22 @@ class ProcessDocumentJob implements ShouldQueue
     //  PROMPTS
     // ═══════════════════════════════════════════════════════════════════════════
 
-    private function buildBankStatementPrompt(string $accountsList): string
+    private function buildBankStatementPrompt(string $accountsList, array $openBalances = []): string
     {
+        $openBalancesList = empty($openBalances)
+            ? '(нема отворени салда во системот моментално)'
+            : collect($openBalances)
+                ->map(fn ($b) => "{$b['name']} (ЕДБ {$b['edb']}) — конто {$b['account_code']} — отворено {$b['balance']}")
+                ->join("\n");
+
         return <<<PROMPT
 Ова е банкарски извод (или повеќе изводи) на македонска компанија. Анализирај ги и врати САМО валиден JSON без никаков дополнителен текст.
 
 Македонски сметковен план (за предлагање контрапартиски сметки):
 {$accountsList}
+
+Отворени побарувања/обврски по фирма (за поврзување на уплата/исплата со конкретна фирма — користи ГИ ОВИЕ имиња точно, не измислувај нови):
+{$openBalancesList}
 
 ВО PDF-ОТ МОЖЕ ДА ИМА ПОВЕЌЕ ИЗВОДИ. Екстрактирај ГИ СИТЕ и врати ги во полето "statements" (низа).
 
@@ -301,6 +352,8 @@ class ProcessDocumentJob implements ShouldQueue
           "debit": 0.00,
           "credit": 25000.00,
           "suggested_account_code": "120",
+          "matched_kontragent_name": "точно име од листата со отворени салда, или null",
+          "matched_reference": "нпр. 'ф-ра: 29/23' или друга референца што укажува која фактура се затвора, или null",
           "ai_confidence": 0.85
         }
       ]
@@ -322,9 +375,11 @@ class ProcessDocumentJob implements ShouldQueue
    - За даноци и придонеси: 230 (ДДВ) или 236 (придонеси)
    - За трошоци: 449 (Останати трошоци на работењето)
    - За останато: избери најблиска сметка од листата подолу
-6. Датумите МОРА да бидат YYYY-MM-DD
-7. Броевите МОРА да бидат децимали (не стрингови)
-8. Врати САМО JSON, без markdown, без објаснувања
+6. matched_kontragent_name: ако износот и описот на трансакцијата одговараат на некоја фирма од листата со отворени салда погоре, врати го НЕЈЗИНОТО ТОЧНО ИМЕ (копирај го точно, не менувај го). Ако нема добро совпаѓање, врати null.
+7. matched_reference: краток текст што укажува која конкретна фактура/документ се затвора (пр. број на фактура споменат во описот), или null ако не може да се одреди
+8. Датумите МОРА да бидат YYYY-MM-DD
+9. Броевите МОРА да бидат децимали (не стрингови)
+10. Врати САМО JSON, без markdown, без објаснувања
 PROMPT;
     }
 

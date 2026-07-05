@@ -9,6 +9,8 @@ use App\Models\ChartOfAccount;
 use App\Models\Document;
 use App\Models\JournalEntry;
 use App\Models\JournalGroup;
+use App\Models\Kontragent;
+use App\Services\MonthlyJournalResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -73,9 +75,9 @@ class JournalEntryController extends Controller
         $this->authorize('create', JournalEntry::class);
 
         abort_unless($document->status === DocumentStatus::Verified, 403, 'Документот мора да биде верификуван.');
-        abort_if($document->journalEntries()->exists(), 409, 'Книжење за овoj документ веќе постои.');
+        abort_if($document->journalEntryLines()->exists(), 409, 'Книжење за овoj документ веќе постои.');
 
-        $document->load(['company:id,name', 'extraction', 'lineItems.suggestedAccount']);
+        $document->load(['company:id,name', 'extraction', 'lineItems.suggestedAccount', 'lineItems.suggestedKontragent']);
 
         [$prefillLines, $suggestedGroupCode] = $this->buildPrefillLines($document);
 
@@ -96,13 +98,46 @@ class JournalEntryController extends Controller
         $journalGroups = JournalGroup::orderBy('code')->get(['code', 'name']);
 
         return Inertia::render('journal-entries/Create', [
-            'document'           => $document,
-            'accounts'           => $accounts,
-            'prefillLines'       => $prefillLines,
-            'journalGroups'      => $journalGroups,
-            'suggestedGroupCode' => $suggestedGroupCode,
-            'defaultDescription' => $defaultDescription,
+            'document'            => $document,
+            'accounts'            => $accounts,
+            'prefillLines'        => $prefillLines,
+            'journalGroups'       => $journalGroups,
+            'suggestedGroupCode'  => $suggestedGroupCode,
+            'defaultDescription'  => $defaultDescription,
+            'suggestedKontragent' => $this->suggestKontragent($document),
         ]);
+    }
+
+    /**
+     * Suggest a partner for InvoiceIn/InvoiceOut documents by matching the
+     * AI-extracted tax id (exact) or name (fuzzy) against this company's kontragenti.
+     * Тамара confirms/changes the suggestion manually before saving.
+     */
+    private function suggestKontragent(Document $document): ?array
+    {
+        if (! in_array($document->type, [\App\Enums\DocumentType::InvoiceIn, \App\Enums\DocumentType::InvoiceOut], true)) {
+            return null;
+        }
+
+        $ext = $document->extraction;
+        if (! $ext) {
+            return null;
+        }
+
+        $name  = $document->type === \App\Enums\DocumentType::InvoiceIn ? $ext->vendor_name : $ext->customer_name;
+        $taxId = $document->type === \App\Enums\DocumentType::InvoiceIn ? $ext->vendor_tax_id : $ext->customer_tax_id;
+
+        $query = Kontragent::where('company_id', $document->company_id);
+
+        $match = null;
+        if ($taxId) {
+            $match = (clone $query)->where('edb', $taxId)->first();
+        }
+        if (! $match && $name) {
+            $match = (clone $query)->where('name', 'like', "%{$name}%")->first();
+        }
+
+        return $match ? ['id' => $match->id, 'name' => $match->name] : null;
     }
 
     private function buildPrefillLines(Document $document): array
@@ -120,19 +155,22 @@ class JournalEntryController extends Controller
                 $lines = [];
                 $sort  = 0;
                 foreach ($lineItems as $item) {
-                    $counter  = $item->confirmed_account_code ?? $item->suggested_account_code ?? '449';
-                    $desc     = $item->description ?? '';
-                    $ref      = $item->reference ? " [{$item->reference}]" : '';
-                    $debitAmt = (float)($item->debit  ?? 0);
-                    $creditAmt= (float)($item->credit ?? 0);
+                    $counter    = $item->confirmed_account_code ?? $item->suggested_account_code ?? '449';
+                    $desc       = $item->description ?? '';
+                    $ref        = $item->reference ? " [{$item->reference}]" : '';
+                    $debitAmt   = (float)($item->debit  ?? 0);
+                    $creditAmt  = (float)($item->credit ?? 0);
+                    $kontragent     = $item->suggested_kontragent_id;
+                    $kontragentName = $item->suggestedKontragent?->name;
+                    $closingRef     = $item->suggested_closing_reference;
 
                     if ($creditAmt > 0) {
-                        // Пари влегуваат → ДОЛЖИ 271, ПОБАРУВА контрапартија
+                        // Пари влегуваат → ДОЛЖИ 100, ПОБАРУВА контрапартија (+ AI-предложена фирма/затворање)
                         $lines[] = ['account_code' => $bankAccount, 'description' => $desc . $ref, 'debit' => $creditAmt, 'credit' => 0, 'sort_order' => $sort++];
-                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => 0, 'credit' => $creditAmt, 'sort_order' => $sort++];
+                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => 0, 'credit' => $creditAmt, 'sort_order' => $sort++, 'kontragent_id' => $kontragent, 'kontragent_name' => $kontragentName, 'closing_reference' => $closingRef];
                     } elseif ($debitAmt > 0) {
-                        // Пари излегуваат → ДОЛЖИ контрапартија, ПОБАРУВА 271
-                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => $debitAmt, 'credit' => 0, 'sort_order' => $sort++];
+                        // Пари излегуваат → ДОЛЖИ контрапартија (+ AI-предложена фирма/затворање), ПОБАРУВА 100
+                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => $debitAmt, 'credit' => 0, 'sort_order' => $sort++, 'kontragent_id' => $kontragent, 'kontragent_name' => $kontragentName, 'closing_reference' => $closingRef];
                         $lines[] = ['account_code' => $bankAccount, 'description' => $desc . $ref, 'debit' => 0, 'credit' => $debitAmt, 'sort_order' => $sort++];
                     }
                 }
@@ -213,40 +251,64 @@ class JournalEntryController extends Controller
     public function store(StoreJournalEntryRequest $request, Document $document): RedirectResponse
     {
         abort_unless($document->status === DocumentStatus::Verified, 403);
-        abort_if($document->journalEntries()->exists(), 409);
+        abort_if($document->journalEntryLines()->exists(), 409);
 
         $groupCode = $request->group_code !== null ? (int) $request->group_code : null;
-        $year      = (int) date('Y', strtotime($request->entry_date));
 
-        $entry = DB::transaction(function () use ($request, $document, $groupCode, $year) {
-            if ($request->sequence_number !== null) {
-                $seq = (int) $request->sequence_number;
-            } elseif ($groupCode !== null) {
-                $seq = $this->nextSequence($groupCode, $year, $document->company_id);
+        $entry = DB::transaction(function () use ($request, $document, $groupCode) {
+            if ($groupCode === null) {
+                // Без група — секогаш засебен налог, точно еден документ
+                $entry = JournalEntry::create([
+                    'document_id'     => $document->id,
+                    'company_id'      => $document->company_id,
+                    'group_code'      => null,
+                    'year'            => null,
+                    'sequence_number' => null,
+                    'entry_date'      => $request->entry_date,
+                    'description'     => $request->description,
+                    'reference'       => $request->reference,
+                    'status'          => JournalEntryStatus::Draft,
+                    'created_by'      => $request->user()->id,
+                ]);
+            } elseif ($request->sequence_number !== null) {
+                // Рачно избран број на налог — најди го или создади (не дуплирај)
+                $entry = MonthlyJournalResolver::resolveExplicit(
+                    $document->company_id, $groupCode, (int) $request->sequence_number,
+                    $request->entry_date, $request->description, $request->user()->id
+                );
+            } elseif (in_array($groupCode, [20, 30], true)) {
+                // Влезни/Излезни фактури — едно месечно налог по група (исто како Sales/PurchaseInvoiceController)
+                $entry = MonthlyJournalResolver::resolve(
+                    $document->company_id, $groupCode, $request->entry_date, $request->description, $request->user()->id
+                );
             } else {
-                $seq = null;
+                $year = (int) date('Y', strtotime($request->entry_date));
+                $seq  = $this->nextSequence($groupCode, $year, $document->company_id);
+                $entry = JournalEntry::create([
+                    'document_id'     => $document->id,
+                    'company_id'      => $document->company_id,
+                    'group_code'      => $groupCode,
+                    'year'            => $year,
+                    'sequence_number' => $seq,
+                    'entry_date'      => $request->entry_date,
+                    'description'     => $request->description,
+                    'reference'       => $request->reference,
+                    'status'          => JournalEntryStatus::Draft,
+                    'created_by'      => $request->user()->id,
+                ]);
             }
 
-            $entry = JournalEntry::create([
-                'document_id'     => $document->id,
-                'company_id'      => $document->company_id,
-                'group_code'      => $groupCode,
-                'year'            => $groupCode !== null ? $year : null,
-                'sequence_number' => $seq,
-                'entry_date'      => $request->entry_date,
-                'description'     => $request->description,
-                'reference'       => $request->reference,
-                'status'          => JournalEntryStatus::Draft,
-                'created_by'      => $request->user()->id,
-            ]);
-
-            foreach ($request->lines as $i => $line) {
+            $sort = $entry->lines()->count();
+            foreach ($request->lines as $line) {
                 $entry->lines()->create([
-                    'sort_order'   => $i,
-                    'account_code' => $line['account_code'],
-                    'debit'        => $line['debit'],
-                    'credit'       => $line['credit'],
-                    'description'  => $line['description'] ?? null,
+                    'document_id'       => $document->id,
+                    'sort_order'        => $sort++,
+                    'account_code'      => $line['account_code'],
+                    'kontragent_id'     => $line['kontragent_id'] ?? $request->kontragent_id,
+                    'closing_reference' => $line['closing_reference'] ?? null,
+                    'debit'             => $line['debit'],
+                    'credit'            => $line['credit'],
+                    'description'       => $line['description'] ?? null,
                 ]);
             }
 

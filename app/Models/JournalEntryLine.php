@@ -9,6 +9,7 @@ class JournalEntryLine extends Model
 {
     protected $fillable = [
         'journal_entry_id',
+        'document_id',
         'sort_order',
         'account_code',
         'kontragent_id',
@@ -30,6 +31,11 @@ class JournalEntryLine extends Model
     public function journalEntry(): BelongsTo
     {
         return $this->belongsTo(JournalEntry::class);
+    }
+
+    public function document(): BelongsTo
+    {
+        return $this->belongsTo(Document::class);
     }
 
     public function account(): BelongsTo
