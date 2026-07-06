@@ -245,13 +245,13 @@ const hasFilters = computed(() => search.value || classFilter.value !== '');
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b bg-muted/50">
-                        <th class="px-3 py-1 text-left font-medium text-muted-foreground">Шифра</th>
-                        <th class="px-3 py-1 text-left font-medium text-muted-foreground">Назив</th>
-                        <th class="px-3 py-1 text-left font-medium text-muted-foreground">Класа</th>
-                        <th class="px-3 py-1 text-left font-medium text-muted-foreground">Тип</th>
-                        <th class="px-3 py-1 text-left font-medium text-muted-foreground">Книжење</th>
-                        <th class="px-3 py-1 text-left font-medium text-muted-foreground">Статус</th>
-                        <th class="px-3 py-1"></th>
+                        <th class="px-3 py-0.5 text-left font-medium text-muted-foreground">Шифра</th>
+                        <th class="px-3 py-0.5 text-left font-medium text-muted-foreground">Назив</th>
+                        <th class="px-3 py-0.5 text-left font-medium text-muted-foreground">Класа</th>
+                        <th class="px-3 py-0.5 text-left font-medium text-muted-foreground">Тип</th>
+                        <th class="px-3 py-0.5 text-left font-medium text-muted-foreground">Книжење</th>
+                        <th class="px-3 py-0.5 text-left font-medium text-muted-foreground">Статус</th>
+                        <th class="px-3 py-0.5"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -266,8 +266,8 @@ const hasFilters = computed(() => search.value || classFilter.value !== '');
                         class="border-b last:border-0 hover:bg-muted/30"
                         :class="{ 'opacity-50': !account.is_active }"
                     >
-                        <td class="px-3 py-1 font-mono font-medium">{{ account.code }}</td>
-                        <td class="px-3 py-1">
+                        <td class="px-3 py-0.5 font-mono font-medium">{{ account.code }}</td>
+                        <td class="px-3 py-0.5">
                             <span :class="account.code.length === 2 ? 'font-semibold' : ''">
                                 {{ account.name }}
                             </span>
@@ -275,23 +275,23 @@ const hasFilters = computed(() => search.value || classFilter.value !== '');
                                 → {{ account.parent_code }}
                             </span>
                         </td>
-                        <td class="px-3 py-1 text-muted-foreground">
+                        <td class="px-3 py-0.5 text-muted-foreground">
                             {{ account.class }}
                         </td>
-                        <td class="px-3 py-1">
+                        <td class="px-3 py-0.5">
                             <Badge :variant="TYPE_VARIANT[account.account_type] ?? 'outline'" class="text-xs">
                                 {{ TYPE_LABELS[account.account_type] ?? account.account_type }}
                             </Badge>
                         </td>
-                        <td class="px-3 py-1">
+                        <td class="px-3 py-0.5">
                             <Badge v-if="account.allows_posting" variant="secondary" class="text-xs">Да</Badge>
                             <span v-else class="text-xs text-muted-foreground">Не</span>
                         </td>
-                        <td class="px-3 py-1">
+                        <td class="px-3 py-0.5">
                             <Badge v-if="account.is_active" variant="secondary" class="text-xs">Активно</Badge>
                             <Badge v-else variant="outline" class="text-xs">Неактивно</Badge>
                         </td>
-                        <td class="px-3 py-1 text-right">
+                        <td class="px-3 py-0.5 text-right">
                             <Button variant="ghost" size="icon" @click="openEdit(account)" title="Уреди">
                                 <Pencil class="size-4" />
                             </Button>
@@ -421,25 +421,25 @@ const hasFilters = computed(() => search.value || classFilter.value !== '');
                     </thead>
                     <tbody>
                         <tr v-for="(row, i) in bulkForm.rows" :key="i" class="border-b last:border-0 align-top">
-                            <td class="px-2 py-1">
+                            <td class="px-2 py-0.5">
                                 <Input v-model="row.parent_code" class="h-8 font-mono text-sm" placeholder="npr. 220" maxlength="10" />
                                 <p v-if="(bulkForm.errors as any)[`rows.${i}.parent_code`]" class="mt-0.5 text-xs text-destructive">
                                     {{ (bulkForm.errors as any)[`rows.${i}.parent_code`] }}
                                 </p>
                             </td>
-                            <td class="px-2 py-1">
+                            <td class="px-2 py-0.5">
                                 <Input v-model="row.code" class="h-8 font-mono text-sm" placeholder="npr. 2201" maxlength="10" />
                                 <p v-if="(bulkForm.errors as any)[`rows.${i}.code`]" class="mt-0.5 text-xs text-destructive">
                                     {{ (bulkForm.errors as any)[`rows.${i}.code`] }}
                                 </p>
                             </td>
-                            <td class="px-2 py-1">
+                            <td class="px-2 py-0.5">
                                 <Input v-model="row.name" class="h-8 text-sm" placeholder="Назив на аналитиката" />
                                 <p v-if="(bulkForm.errors as any)[`rows.${i}.name`]" class="mt-0.5 text-xs text-destructive">
                                     {{ (bulkForm.errors as any)[`rows.${i}.name`] }}
                                 </p>
                             </td>
-                            <td class="px-2 py-1">
+                            <td class="px-2 py-0.5">
                                 <Button
                                     type="button"
                                     variant="ghost"
