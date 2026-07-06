@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Материјално', href: '/kontragenti' }, { title: 'Магацини', href: '/warehouses' }],
+        breadcrumbs: [{ title: 'Материјално', href: '/kooperanti' }, { title: 'Магацини', href: '/warehouses' }],
     },
 });
 

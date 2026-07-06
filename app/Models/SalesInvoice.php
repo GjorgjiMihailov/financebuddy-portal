@@ -12,7 +12,7 @@ class SalesInvoice extends Model
         'company_id',
         'document_id',
         'warehouse_id',
-        'kontragent_id',
+        'kooperant_id',
         'client_name',
         'invoice_number',
         'date',
@@ -53,9 +53,9 @@ class SalesInvoice extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
-    public function kontragent(): BelongsTo
+    public function kooperant(): BelongsTo
     {
-        return $this->belongsTo(Kontragent::class);
+        return $this->belongsTo(Kooperant::class);
     }
 
     public function creator(): BelongsTo

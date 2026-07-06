@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ArrowLeft, Printer, Send, BookCheck, AlertTriangle, Trash2, Loader2 } from '@lucide/vue';
 import { formatDate } from '@/lib/formatDate';
@@ -53,7 +53,7 @@ type Invoice = {
     notes: string | null;
     warehouse: { id: number; name: string } | null;
     company: Company;
-    kontragent: { id: number; name: string; edb: string; address: string | null } | null;
+    kooperant: { id: number; name: string; edb: string; address: string | null } | null;
     client_name: string | null;
     creator: { id: number; name: string };
     lines: Line[];
@@ -240,10 +240,10 @@ function deleteInvoice() {
                     </div>
                     <div class="rounded-lg bg-gray-50 p-4">
                         <p class="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Примач</p>
-                        <template v-if="invoice.kontragent">
-                            <p class="font-semibold text-gray-800">{{ invoice.kontragent.name }}</p>
-                            <p class="text-sm text-gray-600">ЕДБ: {{ invoice.kontragent.edb }}</p>
-                            <p v-if="invoice.kontragent.address" class="text-sm text-gray-600">{{ invoice.kontragent.address }}</p>
+                        <template v-if="invoice.kooperant">
+                            <p class="font-semibold text-gray-800">{{ invoice.kooperant.name }}</p>
+                            <p class="text-sm text-gray-600">ЕДБ: {{ invoice.kooperant.edb }}</p>
+                            <p v-if="invoice.kooperant.address" class="text-sm text-gray-600">{{ invoice.kooperant.address }}</p>
                         </template>
                         <p v-else class="font-semibold text-gray-800">{{ invoice.client_name ?? '—' }}</p>
                     </div>
@@ -356,7 +356,7 @@ function deleteInvoice() {
             <div class="grid gap-4 py-1">
                 <div class="rounded-lg bg-muted/40 px-3 py-2 text-sm">
                     <p class="font-mono font-semibold">{{ invoice.invoice_number }}</p>
-                    <p class="text-muted-foreground">{{ invoice.kontragent?.name ?? invoice.client_name ?? '—' }}</p>
+                    <p class="text-muted-foreground">{{ invoice.kooperant?.name ?? invoice.client_name ?? '—' }}</p>
                     <p class="mt-1 font-semibold">{{ fmt(invoice.total_amount) }} {{ cur }}</p>
                 </div>
                 <div class="grid gap-1.5">

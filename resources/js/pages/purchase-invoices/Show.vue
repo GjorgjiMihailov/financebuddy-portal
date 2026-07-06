@@ -39,7 +39,7 @@ type Invoice = {
     total_amount: string;
     supplier_name: string | null;
     company: { name: string };
-    kontragent: { name: string; edb: string; address: string | null } | null;
+    kooperant: { name: string; edb: string; address: string | null } | null;
     creator: { name: string };
     lines: InvoiceLine[];
 };
@@ -105,10 +105,10 @@ function deleteInvoice() {
                 <div class="col-span-1 rounded-lg bg-gray-50 p-4 print:border print:bg-transparent">
                     <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Добавувач</p>
                     <p class="font-semibold text-gray-900">
-                        {{ invoice.kontragent?.name ?? invoice.supplier_name ?? "—" }}
+                        {{ invoice.kooperant?.name ?? invoice.supplier_name ?? "—" }}
                     </p>
-                    <p v-if="invoice.kontragent?.edb" class="mt-0.5 text-sm text-gray-500">ЕДБ: {{ invoice.kontragent.edb }}</p>
-                    <p v-if="invoice.kontragent?.address" class="mt-0.5 text-sm text-gray-500">{{ invoice.kontragent.address }}</p>
+                    <p v-if="invoice.kooperant?.edb" class="mt-0.5 text-sm text-gray-500">ЕДБ: {{ invoice.kooperant.edb }}</p>
+                    <p v-if="invoice.kooperant?.address" class="mt-0.5 text-sm text-gray-500">{{ invoice.kooperant.address }}</p>
                 </div>
                 <div class="col-span-1 rounded-lg bg-gray-50 p-4 print:border print:bg-transparent">
                     <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Примач</p>

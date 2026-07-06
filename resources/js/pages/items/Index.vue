@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Материјално', href: '/kontragenti' }, { title: 'Артикли', href: '/items' }],
+        breadcrumbs: [{ title: 'Материјално', href: '/kooperanti' }, { title: 'Артикли', href: '/items' }],
     },
 });
 

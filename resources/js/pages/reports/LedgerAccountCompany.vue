@@ -27,8 +27,8 @@ const props = defineProps<{
     to: string;
     accountCode: string | null;
     account: { code: string; name: string } | null;
-    kontragentId: number | null;
-    kontragent: { id: number; name: string } | null;
+    kooperantId: number | null;
+    kooperant: { id: number; name: string } | null;
     opening: { debit: number; credit: number } | null;
     rows: Row[] | null;
     total: { debit: number; credit: number } | null;
@@ -38,18 +38,18 @@ const from = ref(props.from);
 const to = ref(props.to);
 const accountCode = ref(props.accountCode ?? '');
 const accountLabel = ref(props.account ? `${props.account.code} — ${props.account.name}` : '');
-const kontragentId = ref<number | null>(props.kontragentId);
-const kontragentLabel = ref(props.kontragent ? props.kontragent.name : '');
+const kooperantId = ref<number | null>(props.kooperantId);
+const kooperantLabel = ref(props.kooperant ? props.kooperant.name : '');
 
 function onAccountSelect(item: any) { accountCode.value = item?.code ?? ''; }
-function onKontragentSelect(item: any) { kontragentId.value = item?.id ?? null; }
+function onKooperantSelect(item: any) { kooperantId.value = item?.id ?? null; }
 
 function submit() {
     router.get('/reports/ledger-account-company', {
         from: from.value,
         to: to.value,
         account_code: accountCode.value || undefined,
-        kontragent_id: kontragentId.value || undefined,
+        kooperant_id: kooperantId.value || undefined,
     }, { preserveState: true, preserveScroll: true });
 }
 
@@ -67,20 +67,20 @@ function fmt(n: number): string { return formatNumber(n); }
             </div>
             <div class="w-56">
                 <label class="mb-1 block text-xs font-medium text-muted-foreground">Фирма</label>
-                <EntitySearchSelect endpoint="/api/partners/search" :initial-label="kontragentLabel" placeholder="Име, ЕДБ" @select="onKontragentSelect" />
+                <EntitySearchSelect endpoint="/api/partners/search" :initial-label="kooperantLabel" placeholder="Име, ЕДБ" @select="onKooperantSelect" />
             </div>
         </ReportToolbar>
 
         <div class="overflow-x-auto rounded-lg border bg-white p-6 print:rounded-none print:border-0 print:p-2">
             <ReportHeader title="Аналитичка картица" :company="company" :from="from" :to="to" />
 
-            <div v-if="!account || !kontragent" class="py-12 text-center text-muted-foreground">
+            <div v-if="!account || !kooperant" class="py-12 text-center text-muted-foreground">
                 Изберете конто и фирма за да се генерира картицата.
             </div>
 
             <template v-else>
                 <p class="mb-3 text-sm font-medium">
-                    {{ account.code }} &nbsp;{{ account.name }} &mdash; {{ kontragent.name }}
+                    {{ account.code }} &nbsp;{{ account.name }} &mdash; {{ kooperant.name }}
                 </p>
 
                 <table class="w-full border-collapse text-xs">

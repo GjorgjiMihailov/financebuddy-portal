@@ -16,7 +16,7 @@ export const JOURNAL_STATUS_VARIANT: Record<JournalEntryStatus, 'outline' | 'def
     posted: 'default',
 };
 
-export type Kontragent = {
+export type Kooperant = {
     id: number;
     name: string;
     edb: string;
@@ -31,8 +31,8 @@ export type JournalEntryLine = {
     sort_order: number;
     account_code: string;
     account?: { code: string; name: string; class?: number; account_type?: string } | null;
-    kontragent_id?: number | null;
-    kontragent?: Kontragent | null;
+    kooperant_id?: number | null;
+    kooperant?: Kooperant | null;
     line_date?: string | null;
     closing_reference?: string | null;
     debit: string;

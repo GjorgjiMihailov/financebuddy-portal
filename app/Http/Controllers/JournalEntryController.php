@@ -10,7 +10,7 @@ use App\Models\ChartOfAccount;
 use App\Models\Document;
 use App\Models\JournalEntry;
 use App\Models\JournalGroup;
-use App\Models\Kontragent;
+use App\Models\Kooperant;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
 use App\Services\MonthlyJournalResolver;
@@ -80,7 +80,7 @@ class JournalEntryController extends Controller
         abort_unless($document->status === DocumentStatus::Verified, 403, 'Документот мора да биде верификуван.');
         abort_if($document->journalEntryLines()->exists(), 409, 'Книжење за овoj документ веќе постои.');
 
-        $document->load(['company:id,name', 'extraction', 'lineItems.suggestedAccount', 'lineItems.suggestedKontragent']);
+        $document->load(['company:id,name', 'extraction', 'lineItems.suggestedAccount', 'lineItems.suggestedKooperant']);
 
         [$prefillLines, $suggestedGroupCode] = $this->buildPrefillLines($document);
 
@@ -107,17 +107,17 @@ class JournalEntryController extends Controller
             'journalGroups'       => $journalGroups,
             'suggestedGroupCode'  => $suggestedGroupCode,
             'defaultDescription'  => $defaultDescription,
-            'suggestedKontragent' => $this->suggestKontragent($document),
+            'suggestedKooperant' => $this->suggestKooperant($document),
             'currentYear'         => (int) session('current_year', date('Y')),
         ]);
     }
 
     /**
      * Suggest a partner for InvoiceIn/InvoiceOut documents by matching the
-     * AI-extracted tax id (exact) or name (fuzzy) against this company's kontragenti.
+     * AI-extracted tax id (exact) or name (fuzzy) against this company's kooperanti.
      * Тамара confirms/changes the suggestion manually before saving.
      */
-    private function suggestKontragent(Document $document): ?array
+    private function suggestKooperant(Document $document): ?array
     {
         if (! in_array($document->type, [\App\Enums\DocumentType::InvoiceIn, \App\Enums\DocumentType::InvoiceOut], true)) {
             return null;
@@ -131,7 +131,7 @@ class JournalEntryController extends Controller
         $name  = $document->type === \App\Enums\DocumentType::InvoiceIn ? $ext->vendor_name : $ext->customer_name;
         $taxId = $document->type === \App\Enums\DocumentType::InvoiceIn ? $ext->vendor_tax_id : $ext->customer_tax_id;
 
-        $query = Kontragent::where('company_id', $document->company_id);
+        $query = Kooperant::where('company_id', $document->company_id);
 
         $match = null;
         if ($taxId) {
@@ -164,17 +164,17 @@ class JournalEntryController extends Controller
                     $ref        = $item->reference ? " [{$item->reference}]" : '';
                     $debitAmt   = (float)($item->debit  ?? 0);
                     $creditAmt  = (float)($item->credit ?? 0);
-                    $kontragent     = $item->suggested_kontragent_id;
-                    $kontragentName = $item->suggestedKontragent?->name;
+                    $kooperant     = $item->suggested_kooperant_id;
+                    $kooperantName = $item->suggestedKooperant?->name;
                     $closingRef     = $item->suggested_closing_reference;
 
                     if ($creditAmt > 0) {
                         // Пари влегуваат → ДОЛЖИ 100, ПОБАРУВА контрапартија (+ AI-предложена фирма/затворање)
                         $lines[] = ['account_code' => $bankAccount, 'description' => $desc . $ref, 'debit' => $creditAmt, 'credit' => 0, 'sort_order' => $sort++];
-                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => 0, 'credit' => $creditAmt, 'sort_order' => $sort++, 'kontragent_id' => $kontragent, 'kontragent_name' => $kontragentName, 'closing_reference' => $closingRef];
+                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => 0, 'credit' => $creditAmt, 'sort_order' => $sort++, 'kooperant_id' => $kooperant, 'kooperant_name' => $kooperantName, 'closing_reference' => $closingRef];
                     } elseif ($debitAmt > 0) {
                         // Пари излегуваат → ДОЛЖИ контрапартија (+ AI-предложена фирма/затворање), ПОБАРУВА 100
-                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => $debitAmt, 'credit' => 0, 'sort_order' => $sort++, 'kontragent_id' => $kontragent, 'kontragent_name' => $kontragentName, 'closing_reference' => $closingRef];
+                        $lines[] = ['account_code' => $counter,     'description' => $desc . $ref, 'debit' => $debitAmt, 'credit' => 0, 'sort_order' => $sort++, 'kooperant_id' => $kooperant, 'kooperant_name' => $kooperantName, 'closing_reference' => $closingRef];
                         $lines[] = ['account_code' => $bankAccount, 'description' => $desc . $ref, 'debit' => 0, 'credit' => $debitAmt, 'sort_order' => $sort++];
                     }
                 }
@@ -308,7 +308,7 @@ class JournalEntryController extends Controller
                     'document_id'       => $document->id,
                     'sort_order'        => $sort++,
                     'account_code'      => $line['account_code'],
-                    'kontragent_id'     => $line['kontragent_id'] ?? $request->kontragent_id,
+                    'kooperant_id'     => $line['kooperant_id'] ?? $request->kooperant_id,
                     'closing_reference' => $line['closing_reference'] ?? null,
                     'debit'             => $line['debit'],
                     'credit'            => $line['credit'],
@@ -348,7 +348,7 @@ class JournalEntryController extends Controller
             return;
         }
 
-        $kontragentId = $request->kontragent_id;
+        $kooperantId = $request->kooperant_id;
         $invoiceDate  = $ext->document_date ?? $request->entry_date;
         $invoiceNumber = $ext->document_number ?? $request->reference ?? ('AI-' . $document->id);
 
@@ -375,9 +375,9 @@ class JournalEntryController extends Controller
         if ($document->type === DocumentType::InvoiceIn) {
             $invoice = PurchaseInvoice::create([
                 'company_id'     => $document->company_id,
-                'kontragent_id'  => $kontragentId,
+                'kooperant_id'  => $kooperantId,
                 'document_id'    => $document->id,
-                'supplier_name'  => $kontragentId ? null : $ext->vendor_name,
+                'supplier_name'  => $kooperantId ? null : $ext->vendor_name,
                 'invoice_number' => $invoiceNumber,
                 'date'           => $invoiceDate,
                 'due_date'       => $ext->due_date,
@@ -391,8 +391,8 @@ class JournalEntryController extends Controller
             $invoice = SalesInvoice::create([
                 'company_id'     => $document->company_id,
                 'document_id'    => $document->id,
-                'kontragent_id'  => $kontragentId,
-                'client_name'    => $kontragentId ? null : $ext->customer_name,
+                'kooperant_id'  => $kooperantId,
+                'client_name'    => $kooperantId ? null : $ext->customer_name,
                 'invoice_number' => $invoiceNumber,
                 'date'           => $invoiceDate,
                 'due_date'       => $ext->due_date,

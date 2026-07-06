@@ -11,7 +11,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\JournalGroupController;
 use App\Http\Controllers\JournalVoucherController;
-use App\Http\Controllers\KontragentController;
+use App\Http\Controllers\KooperantController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\WarehouseMovementController;
 use App\Http\Controllers\PurchaseInvoiceController;
@@ -75,15 +75,15 @@ Route::middleware(['auth', 'verified', 'company.selected', 'year.selected'])->gr
 
     // ── Account / Partner search ───────────────────────────────────────────────
     Route::get('api/accounts/search', [ChartOfAccountController::class, 'search'])->name('accounts.search');
-    Route::get('api/partners/search', [KontragentController::class, 'searchApi'])->name('partners.search');
+    Route::get('api/partners/search', [KooperantController::class, 'searchApi'])->name('partners.search');
 
     // ── Users ─────────────────────────────────────────────────────────────────
     Route::resource('users', UserController::class)->except(['show']);
 
-    // ── Контрагенти ───────────────────────────────────────────────────────────
-    Route::resource('kontragenti', KontragentController::class)->only(['index', 'store', 'update', 'destroy']);
-    Route::post('kontragenti-bulk', [KontragentController::class, 'storeBulk'])->name('kontragenti.store-bulk');
-    Route::get('companies/{company}/kontragenti', [KontragentController::class, 'forCompany'])->name('companies.kontragenti');
+    // ── Кооперанти ───────────────────────────────────────────────────────────
+    Route::resource('kooperanti', KooperantController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['kooperanti' => 'kooperant']);
+    Route::post('kooperanti-bulk', [KooperantController::class, 'storeBulk'])->name('kooperanti.store-bulk');
+    Route::get('companies/{company}/kooperanti', [KooperantController::class, 'forCompany'])->name('companies.kooperanti');
     Route::get('companies/{company}/items', [ItemController::class, 'forCompany'])->name('companies.items');
 
     // ── Материјално работење ─────────────────────────────────────────────────

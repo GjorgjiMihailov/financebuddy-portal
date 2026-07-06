@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
-use App\Models\Kontragent;
+use App\Models\Kooperant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class KontragentController extends Controller
+class KooperantController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Kontragent::with('company:id,name')
+        $query = Kooperant::with('company:id,name')
             ->where('company_id', $this->currentCompanyId($request))
             ->when($request->type, fn ($q, $t) => $q->where('type', $t))
             ->when($request->search, fn ($q, $s) => $q->where(function ($q) use ($s) {
@@ -23,10 +23,10 @@ class KontragentController extends Controller
             }))
             ->orderBy('name');
 
-        $kontragenti = $query->paginate(20)->withQueryString();
+        $kooperanti = $query->paginate(20)->withQueryString();
 
-        return Inertia::render('kontragenti/Index', [
-            'kontragenti' => $kontragenti,
+        return Inertia::render('kooperanti/Index', [
+            'kooperanti' => $kooperanti,
             'filters'     => $request->only(['type', 'search']),
         ]);
     }
@@ -46,9 +46,9 @@ class KontragentController extends Controller
             'is_active'   => ['boolean'],
         ]);
 
-        Kontragent::create($validated);
+        Kooperant::create($validated);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Контрагентот е успешно додаден.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Кооперантот е успешно додаден.']);
 
         return back();
     }
@@ -71,7 +71,7 @@ class KontragentController extends Controller
 
         $count = DB::transaction(function () use ($validated, $companyId) {
             foreach ($validated['rows'] as $row) {
-                Kontragent::create([
+                Kooperant::create([
                     'company_id'   => $companyId,
                     'name'         => $row['name'],
                     'edb'          => $row['edb'] ?? null,
@@ -88,12 +88,12 @@ class KontragentController extends Controller
             return count($validated['rows']);
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => "Додадени {$count} контрагенти."]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Додадени {$count} кооперанти."]);
 
         return back();
     }
 
-    public function update(Request $request, Kontragent $kontragent): RedirectResponse
+    public function update(Request $request, Kooperant $kooperant): RedirectResponse
     {
         $validated = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
@@ -107,18 +107,18 @@ class KontragentController extends Controller
             'is_active'   => ['boolean'],
         ]);
 
-        $kontragent->update($validated);
+        $kooperant->update($validated);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Контрагентот е ажуриран.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Кооперантот е ажуриран.']);
 
         return back();
     }
 
-    public function destroy(Kontragent $kontragent): RedirectResponse
+    public function destroy(Kooperant $kooperant): RedirectResponse
     {
-        $kontragent->delete();
+        $kooperant->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Контрагентот е избришан.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Кооперантот е избришан.']);
 
         return back();
     }
@@ -128,7 +128,7 @@ class KontragentController extends Controller
         $companyId = $this->currentCompanyId($request);
         $q         = (string) $request->query('q', '');
 
-        $kontragenti = Kontragent::where('company_id', $companyId)
+        $kooperanti = Kooperant::where('company_id', $companyId)
             ->where('is_active', true)
             ->where(function ($query) use ($q) {
                 $query->where('name', 'like', "%{$q}%")
@@ -139,19 +139,19 @@ class KontragentController extends Controller
             ->limit(20)
             ->get(['id', 'name', 'edb', 'embs', 'address', 'phone', 'email']);
 
-        return response()->json($kontragenti);
+        return response()->json($kooperanti);
     }
 
     public function forCompany(Request $request, Company $company): JsonResponse
     {
         $type = $request->query('type');
 
-        $kontragenti = Kontragent::where('company_id', $company->id)
+        $kooperanti = Kooperant::where('company_id', $company->id)
             ->where('is_active', true)
             ->when($type, fn ($q, $t) => $q->whereIn('type', [$t, 'both']))
             ->orderBy('name')
             ->get(['id', 'name', 'edb', 'is_vat_payer', 'type']);
 
-        return response()->json($kontragenti);
+        return response()->json($kooperanti);
     }
 }

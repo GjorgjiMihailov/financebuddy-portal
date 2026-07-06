@@ -14,7 +14,7 @@ defineOptions({
     },
 });
 
-type CompanyRow = { kontragent_id: number | null; name: string; debit: number; credit: number; balance: number };
+type CompanyRow = { kooperant_id: number | null; name: string; debit: number; credit: number; balance: number };
 type Account = { code: string; name: string; companies: CompanyRow[]; debit: number; credit: number; balance: number };
 
 const props = defineProps<{
@@ -59,8 +59,8 @@ function fmt(n: number): string { return formatNumber(n); }
                         <tr class="bg-muted/40">
                             <td colspan="5" class="px-2 py-1 font-semibold">{{ acc.code }} &nbsp; {{ acc.name }}</td>
                         </tr>
-                        <tr v-for="c in acc.companies" :key="c.kontragent_id ?? 0" class="border-b border-dotted">
-                            <td class="px-2 py-1">{{ c.kontragent_id ?? 0 }}</td>
+                        <tr v-for="c in acc.companies" :key="c.kooperant_id ?? 0" class="border-b border-dotted">
+                            <td class="px-2 py-1">{{ c.kooperant_id ?? 0 }}</td>
                             <td class="px-2 py-1">{{ c.name }}</td>
                             <td class="px-2 py-1 text-right">{{ fmt(c.debit) }}</td>
                             <td class="px-2 py-1 text-right">{{ fmt(c.credit) }}</td>

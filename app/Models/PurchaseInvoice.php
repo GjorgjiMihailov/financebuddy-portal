@@ -11,7 +11,7 @@ class PurchaseInvoice extends Model
     protected $fillable = [
         'company_id',
         'warehouse_id',
-        'kontragent_id',
+        'kooperant_id',
         'document_id',
         'supplier_name',
         'invoice_number',
@@ -43,9 +43,9 @@ class PurchaseInvoice extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
-    public function kontragent(): BelongsTo
+    public function kooperant(): BelongsTo
     {
-        return $this->belongsTo(Kontragent::class);
+        return $this->belongsTo(Kooperant::class);
     }
 
     public function document(): BelongsTo

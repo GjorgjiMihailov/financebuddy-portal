@@ -19,7 +19,7 @@ class PurchaseInvoiceController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = PurchaseInvoice::with('company:id,name', 'kontragent:id,name', 'creator:id,name')
+        $query = PurchaseInvoice::with('company:id,name', 'kooperant:id,name', 'creator:id,name')
             ->where('company_id', $this->currentCompanyId($request))
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
             ->latest('date');
@@ -43,7 +43,7 @@ class PurchaseInvoiceController extends Controller
         $validated = $request->validate([
             'company_id'     => ['required', 'exists:companies,id'],
             'warehouse_id'   => ['nullable', 'exists:warehouses,id'],
-            'kontragent_id'  => ['nullable', 'exists:kontragenti,id'],
+            'kooperant_id'  => ['nullable', 'exists:kooperanti,id'],
             'supplier_name'  => ['nullable', 'string', 'max:255'],
             'invoice_number' => ['required', 'string', 'max:100'],
             'date'           => ['required', 'date'],
@@ -89,7 +89,7 @@ class PurchaseInvoiceController extends Controller
             $invoice = PurchaseInvoice::create([
                 'company_id'    => $validated['company_id'],
                 'warehouse_id'  => $validated['warehouse_id'] ?? null,
-                'kontragent_id' => $validated['kontragent_id'] ?? null,
+                'kooperant_id' => $validated['kooperant_id'] ?? null,
                 'supplier_name' => $validated['supplier_name'] ?? null,
                 'invoice_number'=> $validated['invoice_number'],
                 'date'          => $validated['date'],
@@ -119,7 +119,7 @@ class PurchaseInvoiceController extends Controller
         $purchaseInvoice->load([
             'company:id,name',
             'warehouse:id,name',
-            'kontragent:id,name,edb,address',
+            'kooperant:id,name,edb,address',
             'creator:id,name',
             'lines.item:id,code,name,is_service',
         ]);
@@ -166,8 +166,8 @@ class PurchaseInvoiceController extends Controller
             $entry = MonthlyJournalResolver::resolve($invoice->company_id, 20, $date, 'Влезни фактури', $userId);
         }
 
-        $invoice->loadMissing(['kontragent', 'lines']);
-        $partner   = $invoice->kontragent?->name ?? $invoice->supplier_name ?? '—';
+        $invoice->loadMissing(['kooperant', 'lines']);
+        $partner   = $invoice->kooperant?->name ?? $invoice->supplier_name ?? '—';
         $ref       = "{$invoice->invoice_number} – {$partner}";
         $sort      = $entry->lines()->count();
 
@@ -185,7 +185,7 @@ class PurchaseInvoiceController extends Controller
         $entry->lines()->create([
             'sort_order'    => $sort++,
             'account_code'  => '449',
-            'kontragent_id' => $invoice->kontragent_id,
+            'kooperant_id' => $invoice->kooperant_id,
             'line_date'     => $date,
             'description'   => "{$ref} [Потребна проверка на сметка]",
             'debit'         => (float) $invoice->subtotal,
@@ -197,7 +197,7 @@ class PurchaseInvoiceController extends Controller
             $entry->lines()->create([
                 'sort_order'    => $sort++,
                 'account_code'  => '130',
-                'kontragent_id' => $invoice->kontragent_id,
+                'kooperant_id' => $invoice->kooperant_id,
                 'line_date'     => $date,
                 'description'   => "{$ref} / ДДВ {$rate}%",
                 'debit'         => $vatAmount,
@@ -209,7 +209,7 @@ class PurchaseInvoiceController extends Controller
         $entry->lines()->create([
             'sort_order'    => $sort,
             'account_code'  => '220',
-            'kontragent_id' => $invoice->kontragent_id,
+            'kooperant_id' => $invoice->kooperant_id,
             'line_date'     => $date,
             'description'   => $ref,
             'debit'         => 0,
@@ -225,7 +225,7 @@ class PurchaseInvoiceController extends Controller
 
         $validated = $request->validate([
             'warehouse_id'   => ['nullable', 'exists:warehouses,id'],
-            'kontragent_id'  => ['nullable', 'exists:kontragenti,id'],
+            'kooperant_id'  => ['nullable', 'exists:kooperanti,id'],
             'supplier_name'  => ['nullable', 'string', 'max:255'],
             'invoice_number' => ['required', 'string', 'max:100'],
             'date'           => ['required', 'date'],
@@ -270,7 +270,7 @@ class PurchaseInvoiceController extends Controller
 
             $purchaseInvoice->update([
                 'warehouse_id'  => $validated['warehouse_id'] ?? null,
-                'kontragent_id' => $validated['kontragent_id'] ?? null,
+                'kooperant_id' => $validated['kooperant_id'] ?? null,
                 'supplier_name' => $validated['supplier_name'] ?? null,
                 'invoice_number'=> $validated['invoice_number'],
                 'date'          => $validated['date'],

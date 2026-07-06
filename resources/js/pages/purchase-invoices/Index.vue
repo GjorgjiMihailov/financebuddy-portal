@@ -13,11 +13,11 @@ import { Link } from "@inertiajs/vue3";
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Материјално', href: '/kontragenti' }, { title: 'Влезни фактури', href: '/purchase-invoices' }],
+        breadcrumbs: [{ title: 'Материјално', href: '/kooperanti' }, { title: 'Влезни фактури', href: '/purchase-invoices' }],
     },
 });
 
-type Kontragent = { id: number; name: string; edb: string };
+type Kooperant = { id: number; name: string; edb: string };
 type Item = { id: number; code: string; name: string; unit: string; price_without_vat: string; vat_category: string; is_service: boolean };
 type Warehouse = { id: number; name: string };
 type InvoiceLine = {
@@ -29,7 +29,7 @@ type Invoice = {
     id: number; invoice_number: string; date: string; due_date: string | null;
     status: string; total_amount: string;
     company: { id: number; name: string };
-    kontragent: Kontragent | null; supplier_name: string | null;
+    kooperant: Kooperant | null; supplier_name: string | null;
 };
 type Paginated = {
     data: Invoice[]; total: number; last_page: number;
@@ -58,14 +58,14 @@ function applyFilters() {
 
 // Create dialog
 const showCreate = ref(false);
-const kontragenti = ref<Kontragent[]>([]);
+const kooperanti = ref<Kooperant[]>([]);
 const items = ref<Item[]>([]);
 const loadingK = ref(false);
 
 const createForm = useForm({
     company_id:     "",
     warehouse_id:   "",
-    kontragent_id:  "",
+    kooperant_id:  "",
     supplier_name:  "",
     invoice_number: "",
     date:           new Date().toISOString().split("T")[0],
@@ -76,14 +76,14 @@ const createForm = useForm({
 });
 
 watch(() => createForm.company_id, async (id) => {
-    if (!id) { kontragenti.value = []; items.value = []; return; }
+    if (!id) { kooperanti.value = []; items.value = []; return; }
     loadingK.value = true;
     try {
         const [kr, ir] = await Promise.all([
-            fetch(`/companies/${id}/kontragenti?type=supplier`).then(r => r.json()),
+            fetch(`/companies/${id}/kooperanti?type=supplier`).then(r => r.json()),
             fetch(`/companies/${id}/items`).then(r => r.json()),
         ]);
-        kontragenti.value = kr;
+        kooperanti.value = kr;
         items.value       = ir;
     } finally { loadingK.value = false; }
 });
@@ -132,16 +132,16 @@ function openCreate() {
     createForm.company_id = currentCompanyId.value;
     createForm.date       = new Date().toISOString().split("T")[0];
     createForm.status     = "draft";
-    kontragenti.value     = [];
+    kooperanti.value     = [];
     items.value           = [];
     showCreate.value      = true;
     if (currentCompanyId.value) {
         loadingK.value = true;
         Promise.all([
-            fetch(`/companies/${currentCompanyId.value}/kontragenti?type=supplier`).then(r => r.json()),
+            fetch(`/companies/${currentCompanyId.value}/kooperanti?type=supplier`).then(r => r.json()),
             fetch(`/companies/${currentCompanyId.value}/items`).then(r => r.json()),
         ]).then(([kr, ir]) => {
-            kontragenti.value = kr; items.value = ir;
+            kooperanti.value = kr; items.value = ir;
         }).finally(() => { loadingK.value = false; });
     }
 }
@@ -263,7 +263,7 @@ function deleteInvoice(inv: Invoice) {
                     <tr v-for="inv in invoices.data" :key="inv.id" class="border-b last:border-0 hover:bg-muted/30">
                         <td class="px-3 py-1.5 font-mono font-medium">{{ inv.invoice_number }}</td>
                         <td class="px-3 py-1.5 text-muted-foreground">{{ formatDate(inv.date) }}</td>
-                        <td class="px-3 py-1.5">{{ inv.kontragent?.name ?? inv.supplier_name ?? "—" }}</td>
+                        <td class="px-3 py-1.5">{{ inv.kooperant?.name ?? inv.supplier_name ?? "—" }}</td>
                         <td class="px-3 py-1.5 text-right font-mono font-semibold">{{ fmt(inv.total_amount) }}</td>
                         <td class="px-3 py-1.5">
                             <Badge :variant="STATUS_VARIANT[inv.status]" class="text-xs">{{ STATUS_LABELS[inv.status] }}</Badge>
@@ -318,7 +318,7 @@ function deleteInvoice(inv: Invoice) {
             <div v-if="bookingInv" class="grid gap-4 py-1">
                 <div class="rounded-lg bg-muted/40 px-3 py-2 text-sm">
                     <p class="font-mono font-semibold">{{ bookingInv.invoice_number }}</p>
-                    <p class="text-muted-foreground">{{ bookingInv.kontragent?.name ?? bookingInv.supplier_name ?? '—' }}</p>
+                    <p class="text-muted-foreground">{{ bookingInv.kooperant?.name ?? bookingInv.supplier_name ?? '—' }}</p>
                     <p class="mt-1 font-semibold">{{ fmt(bookingInv.total_amount) }} MKD</p>
                 </div>
                 <div class="grid gap-1.5">
@@ -372,11 +372,11 @@ function deleteInvoice(inv: Invoice) {
                 <div class="grid grid-cols-2 gap-4">
                     <div class="grid gap-1.5">
                         <Label>Добавувач</Label>
-                        <Select v-model="createForm.kontragent_id" :disabled="loadingK">
+                        <Select v-model="createForm.kooperant_id" :disabled="loadingK">
                             <SelectTrigger><SelectValue :placeholder="loadingK ? 'Вчитување…' : 'Избери добавувач'" /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">— Без контрагент —</SelectItem>
-                                <SelectItem v-for="k in kontragenti" :key="k.id" :value="String(k.id)">{{ k.name }} ({{ k.edb }})</SelectItem>
+                                <SelectItem value="">— Без кооперант —</SelectItem>
+                                <SelectItem v-for="k in kooperanti" :key="k.id" :value="String(k.id)">{{ k.name }} ({{ k.edb }})</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

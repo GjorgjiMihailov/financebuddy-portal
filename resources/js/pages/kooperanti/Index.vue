@@ -18,11 +18,11 @@ import {
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Материјално', href: '/kontragenti' }, { title: 'Кооперанти', href: '/kontragenti' }],
+        breadcrumbs: [{ title: 'Материјално', href: '/kooperanti' }, { title: 'Кооперанти', href: '/kooperanti' }],
     },
 });
 
-type Kontragent = {
+type Kooperant = {
     id: number;
     company_id: number;
     name: string;
@@ -37,8 +37,8 @@ type Kontragent = {
     company: { id: number; name: string };
 };
 
-type PaginatedKontragenti = {
-    data: Kontragent[];
+type PaginatedKooperanti = {
+    data: Kooperant[];
     current_page: number;
     last_page: number;
     total: number;
@@ -46,7 +46,7 @@ type PaginatedKontragenti = {
 };
 
 const props = defineProps<{
-    kontragenti: PaginatedKontragenti;
+    kooperanti: PaginatedKooperanti;
     filters: { type?: string; search?: string };
 }>();
 
@@ -70,7 +70,7 @@ const search     = ref(props.filters.search ?? '');
 const typeFilter = ref(props.filters.type ?? '');
 
 function applyFilters() {
-    router.get('/kontragenti', {
+    router.get('/kooperanti', {
         ...(search.value ? { search: search.value } : {}),
         ...(typeFilter.value ? { type: typeFilter.value } : {}),
     }, { preserveState: true, replace: true });
@@ -79,7 +79,7 @@ function applyFilters() {
 function clearFilters() {
     search.value = '';
     typeFilter.value = '';
-    router.get('/kontragenti', {}, { preserveState: true, replace: true });
+    router.get('/kooperanti', {}, { preserveState: true, replace: true });
 }
 
 const hasFilters = computed(() => search.value || typeFilter.value);
@@ -102,7 +102,7 @@ const createForm = useForm({
 
 function submitCreate() {
     createForm.company_id = String(currentCompany.value?.id ?? '');
-    createForm.post('/kontragenti', {
+    createForm.post('/kooperanti', {
         onSuccess: () => {
             showCreate.value = false;
             createForm.reset();
@@ -135,7 +135,7 @@ function submitBulk() {
     // Испрати ги само редовите со внесен назив
     bulkForm.transform((data) => ({
         rows: data.rows.filter((r) => r.name.trim() !== ''),
-    })).post('/kontragenti-bulk', {
+    })).post('/kooperanti-bulk', {
         onSuccess: () => {
             showBulk.value = false;
             bulkForm.reset();
@@ -146,7 +146,7 @@ function submitBulk() {
 
 // ─── Edit dialog ─────────────────────────────────────────────────────────────
 const showEdit    = ref(false);
-const editTarget  = ref<Kontragent | null>(null);
+const editTarget  = ref<Kooperant | null>(null);
 
 const editForm = useForm({
     name:         '',
@@ -160,7 +160,7 @@ const editForm = useForm({
     is_active:    true,
 });
 
-function openEdit(k: Kontragent) {
+function openEdit(k: Kooperant) {
     editTarget.value = k;
     editForm.name         = k.name;
     editForm.edb          = k.edb;
@@ -176,7 +176,7 @@ function openEdit(k: Kontragent) {
 
 function submitEdit() {
     if (!editTarget.value) return;
-    editForm.put(`/kontragenti/${editTarget.value.id}`, {
+    editForm.put(`/kooperanti/${editTarget.value.id}`, {
         onSuccess: () => {
             showEdit.value = false;
             editTarget.value = null;
@@ -185,9 +185,9 @@ function submitEdit() {
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
-function deleteKontragent(k: Kontragent) {
-    if (!confirm(`Избриши контрагент "${k.name}"?`)) return;
-    router.delete(`/kontragenti/${k.id}`, { preserveScroll: true });
+function deleteKooperant(k: Kooperant) {
+    if (!confirm(`Избриши кооперант "${k.name}"?`)) return;
+    router.delete(`/kooperanti/${k.id}`, { preserveScroll: true });
 }
 </script>
 
@@ -201,7 +201,7 @@ function deleteKontragent(k: Kontragent) {
             <div>
                 <h1 class="text-2xl font-semibold">Кооперанти</h1>
                 <p class="mt-0.5 text-sm text-muted-foreground">
-                    {{ kontragenti.total }} деловни партнери (клиенти / добавувачи)
+                    {{ kooperanti.total }} деловни партнери (клиенти / добавувачи)
                 </p>
             </div>
             <div class="flex gap-2">
@@ -211,7 +211,7 @@ function deleteKontragent(k: Kontragent) {
                 </Button>
                 <Button @click="showCreate = true">
                     <Plus class="mr-2 size-4" />
-                    Нов контрагент
+                    Нов кооперант
                 </Button>
             </div>
         </div>
@@ -265,14 +265,14 @@ function deleteKontragent(k: Kontragent) {
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-if="kontragenti.data.length === 0">
+                    <tr v-if="kooperanti.data.length === 0">
                         <td colspan="7" class="py-16 text-center text-muted-foreground">
                             <Building2 class="mx-auto mb-3 size-10 opacity-30" />
-                            Нема контрагенти
+                            Нема кооперанти
                         </td>
                     </tr>
                     <tr
-                        v-for="k in kontragenti.data"
+                        v-for="k in kooperanti.data"
                         :key="k.id"
                         class="border-b last:border-0 hover:bg-muted/30"
                         :class="{ 'opacity-50': !k.is_active }"
@@ -298,7 +298,7 @@ function deleteKontragent(k: Kontragent) {
                                 <Button variant="ghost" size="icon" @click="openEdit(k)" title="Уреди">
                                     <Pencil class="size-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" class="text-destructive hover:text-destructive" @click="deleteKontragent(k)" title="Избриши">
+                                <Button variant="ghost" size="icon" class="text-destructive hover:text-destructive" @click="deleteKooperant(k)" title="Избриши">
                                     <Trash2 class="size-4" />
                                 </Button>
                             </div>
@@ -309,9 +309,9 @@ function deleteKontragent(k: Kontragent) {
         </div>
 
         <!-- Pagination -->
-        <div v-if="kontragenti.last_page > 1" class="flex justify-center gap-1">
+        <div v-if="kooperanti.last_page > 1" class="flex justify-center gap-1">
             <Button
-                v-for="link in kontragenti.links"
+                v-for="link in kooperanti.links"
                 :key="link.label"
                 :variant="link.active ? 'default' : 'outline'"
                 size="sm"
@@ -327,13 +327,13 @@ function deleteKontragent(k: Kontragent) {
     <Dialog v-model:open="showCreate">
         <DialogContent class="max-w-lg">
             <DialogHeader>
-                <DialogTitle>Нов контрагент</DialogTitle>
+                <DialogTitle>Нов кооперант</DialogTitle>
             </DialogHeader>
 
             <form class="grid gap-4 py-2" @submit.prevent="submitCreate">
                 <div class="grid gap-1.5">
                     <Label for="c-name">Назив *</Label>
-                    <Input id="c-name" v-model="createForm.name" placeholder="Назив на контрагентот" />
+                    <Input id="c-name" v-model="createForm.name" placeholder="Назив на кооперантот" />
                     <p v-if="createForm.errors.name" class="text-xs text-destructive">{{ createForm.errors.name }}</p>
                 </div>
 
@@ -396,7 +396,7 @@ function deleteKontragent(k: Kontragent) {
             <DialogFooter>
                 <Button variant="outline" @click="showCreate = false">Откажи</Button>
                 <Button :disabled="createForm.processing" @click="submitCreate">
-                    {{ createForm.processing ? 'Зачувување…' : 'Додај контрагент' }}
+                    {{ createForm.processing ? 'Зачувување…' : 'Додај кооперант' }}
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -406,7 +406,7 @@ function deleteKontragent(k: Kontragent) {
     <Dialog v-model:open="showBulk">
         <DialogContent class="max-w-5xl">
             <DialogHeader>
-                <DialogTitle>Масовен внес на контрагенти</DialogTitle>
+                <DialogTitle>Масовен внес на кооперанти</DialogTitle>
             </DialogHeader>
 
             <p class="text-sm text-muted-foreground">
@@ -487,7 +487,7 @@ function deleteKontragent(k: Kontragent) {
         <DialogContent class="max-w-lg">
             <DialogHeader>
                 <DialogTitle>
-                    Уреди контрагент
+                    Уреди кооперант
                     <span v-if="editTarget" class="ml-2 text-base font-normal text-muted-foreground">
                         {{ editTarget.name }}
                     </span>

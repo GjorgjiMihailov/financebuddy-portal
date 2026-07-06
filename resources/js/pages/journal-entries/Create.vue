@@ -30,12 +30,12 @@ const props = defineProps<{
     accounts: AccountGroup;
     prefillLines: {
         account_code: string; description: string; debit: number; credit: number;
-        kontragent_id?: number | null; kontragent_name?: string | null; closing_reference?: string | null;
+        kooperant_id?: number | null; kooperant_name?: string | null; closing_reference?: string | null;
     }[];
     journalGroups: JournalGroup[];
     suggestedGroupCode: number | null;
     defaultDescription: string;
-    suggestedKontragent: { id: number; name: string } | null;
+    suggestedKooperant: { id: number; name: string } | null;
     currentYear: number;
 }>();
 
@@ -48,14 +48,14 @@ defineOptions({
     },
 });
 
-const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 0, kontragent_id: null as number | null, kontragent_name: '', closing_reference: '' });
+const emptyLine = () => ({ account_code: '', description: '', debit: 0, credit: 0, kooperant_id: null as number | null, kooperant_name: '', closing_reference: '' });
 
 const form = useForm({
     group_code:       props.suggestedGroupCode ?? null as number | null,
     description:      props.defaultDescription || '',
     entry_date:       props.document.extraction?.document_date ?? `${props.currentYear}-01-01`,
     reference:        props.document.extraction?.document_number ?? '',
-    kontragent_id:    props.suggestedKontragent?.id ?? null as number | null,
+    kooperant_id:    props.suggestedKooperant?.id ?? null as number | null,
     sequence_number:  null as number | null,
     post_immediately: false,
     lines:            props.prefillLines.length >= 2
@@ -64,17 +64,17 @@ const form = useForm({
             description: l.description,
             debit: l.debit,
             credit: l.credit,
-            kontragent_id: l.kontragent_id ?? null,
-            kontragent_name: l.kontragent_name ?? '',
+            kooperant_id: l.kooperant_id ?? null,
+            kooperant_name: l.kooperant_name ?? '',
             closing_reference: l.closing_reference ?? '',
         }))
         : [emptyLine(), emptyLine()],
 });
 
-const kontragentLabel = ref(props.suggestedKontragent?.name ?? '');
+const kooperantLabel = ref(props.suggestedKooperant?.name ?? '');
 
-function onKontragentSelect(item: any) {
-    form.kontragent_id = item?.id ?? null;
+function onKooperantSelect(item: any) {
+    form.kooperant_id = item?.id ?? null;
 }
 
 const nextVoucherPreview = ref<string | null>(null);
@@ -178,9 +178,9 @@ function submitPost() {
                     <Label>Фирма (партнер)</Label>
                     <EntitySearchSelect
                         endpoint="/api/partners/search"
-                        :initial-label="kontragentLabel"
+                        :initial-label="kooperantLabel"
                         placeholder="Име, ЕДБ"
-                        @select="onKontragentSelect"
+                        @select="onKooperantSelect"
                     />
                 </div>
                 <div class="grid gap-2">
@@ -273,9 +273,9 @@ function submitPost() {
                                 <td class="px-3 py-2">
                                     <EntitySearchSelect
                                         endpoint="/api/partners/search"
-                                        :initial-label="line.kontragent_name"
+                                        :initial-label="line.kooperant_name"
                                         placeholder="—"
-                                        @select="(item: any) => { line.kontragent_id = item?.id ?? null; line.kontragent_name = item?.name ?? ''; }"
+                                        @select="(item: any) => { line.kooperant_id = item?.id ?? null; line.kooperant_name = item?.name ?? ''; }"
                                     />
                                 </td>
                                 <td class="px-3 py-2">

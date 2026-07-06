@@ -29,24 +29,24 @@ const props = defineProps<{
     company: { id: number; name: string } | null;
     from: string;
     to: string;
-    kontragentId: number | null;
-    kontragent: { id: number; name: string } | null;
+    kooperantId: number | null;
+    kooperant: { id: number; name: string } | null;
     sections: Section[] | null;
     grandTotal: { debit: number; credit: number } | null;
 }>();
 
 const from = ref(props.from);
 const to = ref(props.to);
-const kontragentId = ref<number | null>(props.kontragentId);
-const kontragentLabel = ref(props.kontragent ? props.kontragent.name : '');
+const kooperantId = ref<number | null>(props.kooperantId);
+const kooperantLabel = ref(props.kooperant ? props.kooperant.name : '');
 
-function onKontragentSelect(item: any) { kontragentId.value = item?.id ?? null; }
+function onKooperantSelect(item: any) { kooperantId.value = item?.id ?? null; }
 
 function submit() {
     router.get('/reports/ledger-company', {
         from: from.value,
         to: to.value,
-        kontragent_id: kontragentId.value || undefined,
+        kooperant_id: kooperantId.value || undefined,
     }, { preserveState: true, preserveScroll: true });
 }
 
@@ -60,19 +60,19 @@ function fmt(n: number): string { return formatNumber(n); }
         <ReportToolbar v-model:from="from" v-model:to="to" @submit="submit">
             <div class="w-64">
                 <label class="mb-1 block text-xs font-medium text-muted-foreground">Фирма</label>
-                <EntitySearchSelect endpoint="/api/partners/search" :initial-label="kontragentLabel" placeholder="Име, ЕДБ" @select="onKontragentSelect" />
+                <EntitySearchSelect endpoint="/api/partners/search" :initial-label="kooperantLabel" placeholder="Име, ЕДБ" @select="onKooperantSelect" />
             </div>
         </ReportToolbar>
 
         <div class="overflow-x-auto rounded-lg border bg-white p-6 print:rounded-none print:border-0 print:p-2">
             <ReportHeader title="Аналитичка картица за фирма" :company="company" :from="from" :to="to" />
 
-            <div v-if="!kontragent" class="py-12 text-center text-muted-foreground">
+            <div v-if="!kooperant" class="py-12 text-center text-muted-foreground">
                 Изберете фирма за да се генерира картицата.
             </div>
 
             <template v-else>
-                <p class="mb-3 text-sm font-medium">Фирма {{ kontragent.name }}</p>
+                <p class="mb-3 text-sm font-medium">Фирма {{ kooperant.name }}</p>
 
                 <template v-for="section in sections ?? []" :key="section.code">
                     <table class="mb-4 w-full border-collapse text-xs">

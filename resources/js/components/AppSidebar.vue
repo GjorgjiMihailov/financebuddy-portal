@@ -65,9 +65,9 @@ const financesItems: NavItem[] = [
 // ── Материјално ────────────────────────────────────────────────────────────────
 const materijalnoItems = computed<NavItem[]>(() => [{
     title: 'Материјално',
-    href: '/kontragenti',
+    href: '/kooperanti',
     icon: Package,
-    isActive: ['/kontragenti', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices']
+    isActive: ['/kooperanti', '/warehouses', '/items', '/purchase-invoices', '/sales-invoices']
         .some(p => isCurrentOrParentUrl(p)),
 }]);
 

@@ -50,7 +50,7 @@ class JournalVoucherController extends Controller
             if ($entry) {
                 $entry->load([
                     'lines.account:code,name,class,account_type',
-                    'lines.kontragent:id,name,edb,embs,address,phone,email',
+                    'lines.kooperant:id,name,edb,embs,address,phone,email',
                     'journalGroup:code,name',
                 ]);
                 $total    = $this->baseQuery($companyId, $gc, $year)->count();
@@ -100,7 +100,7 @@ class JournalVoucherController extends Controller
 
         $entry->load([
             'lines.account:code,name,class,account_type',
-            'lines.kontragent:id,name,edb,embs,address,phone,email',
+            'lines.kooperant:id,name,edb,embs,address,phone,email',
             'journalGroup:code,name',
         ]);
 
@@ -185,7 +185,7 @@ class JournalVoucherController extends Controller
         if ($next) {
             $next->load([
                 'lines.account:code,name,class,account_type',
-                'lines.kontragent:id,name,edb,embs,address,phone,email',
+                'lines.kooperant:id,name,edb,embs,address,phone,email',
                 'journalGroup:code,name',
             ]);
         }
@@ -204,18 +204,18 @@ class JournalVoucherController extends Controller
 
     public function openInvoices(Request $request): JsonResponse
     {
-        $kontragentId = (int) $request->query('kontragent_id');
+        $kooperantId = (int) $request->query('kooperant_id');
         $companyId    = (int) $request->query('company_id');
 
         $purchases = PurchaseInvoice::where('company_id', $companyId)
-            ->where('kontragent_id', $kontragentId)
+            ->where('kooperant_id', $kooperantId)
             ->where('status', '!=', 'draft')
             ->orderByDesc('date')
             ->limit(10)
             ->get(['id', 'invoice_number', 'date', 'total_amount', 'status']);
 
         $sales = SalesInvoice::where('company_id', $companyId)
-            ->where('kontragent_id', $kontragentId)
+            ->where('kooperant_id', $kooperantId)
             ->where('status', '!=', 'draft')
             ->orderByDesc('date')
             ->limit(10)
@@ -246,7 +246,7 @@ class JournalVoucherController extends Controller
             'reference'                 => ['nullable', 'string', 'max:100'],
             'lines'                     => ['required', 'array', 'min:1'],
             'lines.*.account_code'      => ['required', 'string', 'exists:chart_of_accounts,code'],
-            'lines.*.kontragent_id'     => ['nullable', 'integer', 'exists:kontragenti,id'],
+            'lines.*.kooperant_id'     => ['nullable', 'integer', 'exists:kooperanti,id'],
             'lines.*.line_date'         => ['nullable', 'date'],
             'lines.*.description'       => ['nullable', 'string', 'max:255'],
             'lines.*.closing_reference' => ['nullable', 'string', 'max:100'],
@@ -261,7 +261,7 @@ class JournalVoucherController extends Controller
             $entry->lines()->create([
                 'sort_order'        => $i,
                 'account_code'      => $line['account_code'],
-                'kontragent_id'     => $line['kontragent_id'] ?? null,
+                'kooperant_id'     => $line['kooperant_id'] ?? null,
                 'line_date'         => $line['line_date'] ?? null,
                 'description'       => $line['description'] ?? null,
                 'closing_reference' => $line['closing_reference'] ?? null,
@@ -284,7 +284,7 @@ class JournalVoucherController extends Controller
     {
         $entry->load([
             'lines.account:code,name,class,account_type',
-            'lines.kontragent:id,name,edb,embs,address,phone,email',
+            'lines.kooperant:id,name,edb,embs,address,phone,email',
             'journalGroup:code,name',
         ]);
 

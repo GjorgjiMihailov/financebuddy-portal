@@ -12,7 +12,7 @@ class JournalEntryLine extends Model
         'document_id',
         'sort_order',
         'account_code',
-        'kontragent_id',
+        'kooperant_id',
         'line_date',
         'debit',
         'credit',
@@ -43,8 +43,8 @@ class JournalEntryLine extends Model
         return $this->belongsTo(ChartOfAccount::class, 'account_code', 'code');
     }
 
-    public function kontragent(): BelongsTo
+    public function kooperant(): BelongsTo
     {
-        return $this->belongsTo(Kontragent::class);
+        return $this->belongsTo(Kooperant::class);
     }
 }

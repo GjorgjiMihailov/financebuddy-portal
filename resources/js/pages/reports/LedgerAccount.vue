@@ -17,7 +17,7 @@ defineOptions({
 });
 
 type Row = {
-    date: string; voucher: string | null; kontragent_name: string | null;
+    date: string; voucher: string | null; kooperant_name: string | null;
     description: string | null; closing_reference: string | null;
     debit: number; credit: number; balance: number;
 };
@@ -94,7 +94,7 @@ function fmt(n: number): string { return formatNumber(n); }
                         <tr v-for="(r, i) in rows ?? []" :key="i" class="border-b border-dotted">
                             <td class="px-2 py-1">{{ formatDate(r.date) }}</td>
                             <td class="px-2 py-1 font-mono">{{ r.voucher ?? '—' }}</td>
-                            <td class="px-2 py-1">{{ r.kontragent_name ?? '—' }}</td>
+                            <td class="px-2 py-1">{{ r.kooperant_name ?? '—' }}</td>
                             <td class="px-2 py-1">
                                 {{ r.description ?? '—' }}
                                 <span v-if="r.closing_reference" class="text-muted-foreground"> &gt; {{ r.closing_reference }}</span>

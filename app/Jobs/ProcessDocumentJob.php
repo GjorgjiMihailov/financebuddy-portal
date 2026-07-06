@@ -188,7 +188,7 @@ class ProcessDocumentJob implements ShouldQueue
             // Match Claude's suggested partner name back to one of the candidates
             // we fed it (never a free DB-wide search) so the suggestion is always
             // an actual open receivable/payable — Тамара confirms/changes it.
-            $matchedName    = $tx['matched_kontragent_name'] ?? null;
+            $matchedName    = $tx['matched_kooperant_name'] ?? null;
             $matchedBalance = $matchedName
                 ? collect($openBalances)->first(fn ($b) => mb_strtolower($b['name']) === mb_strtolower($matchedName))
                 : null;
@@ -204,7 +204,7 @@ class ProcessDocumentJob implements ShouldQueue
                 'total_amount'                => max((float)($tx['debit'] ?? 0), (float)($tx['credit'] ?? 0)),
                 'suggested_account_code'      => $acctCode,
                 'ai_confidence'               => $tx['ai_confidence'] ?? null,
-                'suggested_kontragent_id'     => $matchedBalance['kontragent_id'] ?? null,
+                'suggested_kooperant_id'     => $matchedBalance['kooperant_id'] ?? null,
                 'suggested_closing_reference' => $matchedBalance ? ($tx['matched_reference'] ?? null) : null,
             ]);
         }
@@ -220,7 +220,7 @@ class ProcessDocumentJob implements ShouldQueue
     {
         return DB::table('journal_entry_lines as jel')
             ->join('journal_entries as je', 'je.id', '=', 'jel.journal_entry_id')
-            ->join('kontragenti as k', 'k.id', '=', 'jel.kontragent_id')
+            ->join('kooperanti as k', 'k.id', '=', 'jel.kooperant_id')
             ->where('je.company_id', $companyId)
             ->where('je.status', JournalEntryStatus::Posted->value)
             ->whereIn('jel.account_code', ['120', '220'])
@@ -229,7 +229,7 @@ class ProcessDocumentJob implements ShouldQueue
             ->havingRaw('ABS(SUM(jel.debit) - SUM(jel.credit)) > 0.01')
             ->get()
             ->map(fn ($r) => [
-                'kontragent_id' => $r->id,
+                'kooperant_id' => $r->id,
                 'name'          => $r->name,
                 'edb'           => $r->edb,
                 'account_code'  => $r->account_code,
@@ -393,7 +393,7 @@ class ProcessDocumentJob implements ShouldQueue
           "debit": 0.00,
           "credit": 25000.00,
           "suggested_account_code": "120",
-          "matched_kontragent_name": "точно име од листата со отворени салда, или null",
+          "matched_kooperant_name": "точно име од листата со отворени салда, или null",
           "matched_reference": "нпр. 'ф-ра: 29/23' или друга референца што укажува која фактура се затвора, или null",
           "ai_confidence": 0.85
         }
@@ -416,7 +416,7 @@ class ProcessDocumentJob implements ShouldQueue
    - За даноци и придонеси: 230 (ДДВ) или 236 (придонеси)
    - За трошоци: 449 (Останати трошоци на работењето)
    - За останато: избери најблиска сметка од листата подолу
-6. matched_kontragent_name: ако износот и описот на трансакцијата одговараат на некоја фирма од листата со отворени салда погоре, врати го НЕЈЗИНОТО ТОЧНО ИМЕ (копирај го точно, не менувај го). Ако нема добро совпаѓање, врати null.
+6. matched_kooperant_name: ако износот и описот на трансакцијата одговараат на некоја фирма од листата со отворени салда погоре, врати го НЕЈЗИНОТО ТОЧНО ИМЕ (копирај го точно, не менувај го). Ако нема добро совпаѓање, врати null.
 7. matched_reference: краток текст што укажува која конкретна фактура/документ се затвора (пр. број на фактура споменат во описот), или null ако не може да се одреди
 8. Датумите МОРА да бидат YYYY-MM-DD
 9. Броевите МОРА да бидат децимали (не стрингови)

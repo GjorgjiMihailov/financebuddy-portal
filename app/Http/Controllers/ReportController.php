@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\JournalEntryStatus;
 use App\Models\ChartOfAccount;
 use App\Models\Company;
-use App\Models\Kontragent;
+use App\Models\Kooperant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +47,7 @@ class ReportController extends Controller
         $accounts = $rows->groupBy('account_code')->map(function ($items, $code) {
             $first = $items->first();
             $companies = $items->map(fn ($r) => array_merge(
-                ['kontragent_id' => $r->kontragent_id, 'name' => $r->kontragent_name ?? 'Без партнер'],
+                ['kooperant_id' => $r->kooperant_id, 'name' => $r->kooperant_name ?? 'Без партнер'],
                 $this->shapeBucket((array) $r)
             ))->values();
 
@@ -112,8 +112,8 @@ class ReportController extends Controller
                 $credit = (float) $r->period_credit;
 
                 return [
-                    'kontragent_id' => $r->kontragent_id,
-                    'name' => $r->kontragent_name ?? 'Без партнер',
+                    'kooperant_id' => $r->kooperant_id,
+                    'name' => $r->kooperant_name ?? 'Без партнер',
                     'debit' => $debit,
                     'credit' => $credit,
                     'balance' => $debit - $credit,
@@ -151,17 +151,17 @@ class ReportController extends Controller
         [$from, $to] = $this->periodParams($request);
 
         $accountCode = $request->query('account_code');
-        $kontragentId = $request->query('kontragent_id');
+        $kooperantId = $request->query('kooperant_id');
 
         $account = $accountCode ? ChartOfAccount::find($accountCode) : null;
-        $kontragent = $kontragentId ? Kontragent::find($kontragentId) : null;
+        $kooperant = $kooperantId ? Kooperant::find($kooperantId) : null;
 
         $rows = null;
         $opening = null;
         $total = null;
 
-        if ($account && $kontragent) {
-            $scope = fn ($q) => $q->where('jel.account_code', $accountCode)->where('jel.kontragent_id', $kontragentId);
+        if ($account && $kooperant) {
+            $scope = fn ($q) => $q->where('jel.account_code', $accountCode)->where('jel.kooperant_id', $kooperantId);
             $opening = $this->ledgerOpening($companyId, $from, $scope);
             $lines = $this->ledgerLines($companyId, $from, $to, $scope);
             $rows = $this->buildLedgerRows($lines, $opening);
@@ -174,8 +174,8 @@ class ReportController extends Controller
             'to' => $to,
             'accountCode' => $accountCode,
             'account' => $account,
-            'kontragentId' => $kontragentId ? (int) $kontragentId : null,
-            'kontragent' => $kontragent,
+            'kooperantId' => $kooperantId ? (int) $kooperantId : null,
+            'kooperant' => $kooperant,
             'opening' => $opening,
             'rows' => $rows,
             'total' => $total,
@@ -219,21 +219,21 @@ class ReportController extends Controller
         $companyId = $this->currentCompanyId($request);
         [$from, $to] = $this->periodParams($request);
 
-        $kontragentId = $request->query('kontragent_id');
-        $kontragent = $kontragentId ? Kontragent::find($kontragentId) : null;
+        $kooperantId = $request->query('kooperant_id');
+        $kooperant = $kooperantId ? Kooperant::find($kooperantId) : null;
 
         $sections = null;
         $grandTotal = null;
 
-        if ($kontragent) {
-            $scope = fn ($q) => $q->where('jel.kontragent_id', $kontragentId);
+        if ($kooperant) {
+            $scope = fn ($q) => $q->where('jel.kooperant_id', $kooperantId);
             $lines = $this->ledgerLines($companyId, $from, $to, $scope)->groupBy('account_code');
 
             $accountCodes = $lines->keys()->filter()->values();
             $accountNames = ChartOfAccount::whereIn('code', $accountCodes)->pluck('name', 'code');
 
-            $sections = $accountCodes->map(function ($code) use ($lines, $accountNames, $companyId, $from, $kontragentId) {
-                $accScope = fn ($q) => $q->where('jel.account_code', $code)->where('jel.kontragent_id', $kontragentId);
+            $sections = $accountCodes->map(function ($code) use ($lines, $accountNames, $companyId, $from, $kooperantId) {
+                $accScope = fn ($q) => $q->where('jel.account_code', $code)->where('jel.kooperant_id', $kooperantId);
                 $opening = $this->ledgerOpening($companyId, $from, $accScope);
                 $rows = $this->buildLedgerRows($lines[$code], $opening);
 
@@ -256,8 +256,8 @@ class ReportController extends Controller
             'company' => $this->reportCompany($companyId),
             'from' => $from,
             'to' => $to,
-            'kontragentId' => $kontragentId ? (int) $kontragentId : null,
-            'kontragent' => $kontragent,
+            'kooperantId' => $kooperantId ? (int) $kooperantId : null,
+            'kooperant' => $kooperant,
             'sections' => $sections,
             'grandTotal' => $grandTotal,
         ]);
@@ -311,20 +311,20 @@ class ReportController extends Controller
         return DB::table('journal_entry_lines as jel')
             ->join('journal_entries as je', 'je.id', '=', 'jel.journal_entry_id')
             ->join('chart_of_accounts as coa', 'coa.code', '=', 'jel.account_code')
-            ->leftJoin('kontragenti as k', 'k.id', '=', 'jel.kontragent_id')
+            ->leftJoin('kooperanti as k', 'k.id', '=', 'jel.kooperant_id')
             ->where('je.company_id', $companyId)
             ->where('je.status', JournalEntryStatus::Posted->value)
             ->whereNotNull('jel.account_code')
             ->selectRaw(
                 'coa.code as account_code, coa.name as account_name, coa.class as class,'.
-                ' jel.kontragent_id as kontragent_id, k.name as kontragent_name,'.
+                ' jel.kooperant_id as kooperant_id, k.name as kooperant_name,'.
                 ' SUM(CASE WHEN COALESCE(jel.line_date, je.entry_date) < ? THEN jel.debit ELSE 0 END) as open_debit,'.
                 ' SUM(CASE WHEN COALESCE(jel.line_date, je.entry_date) < ? THEN jel.credit ELSE 0 END) as open_credit,'.
                 ' SUM(CASE WHEN COALESCE(jel.line_date, je.entry_date) BETWEEN ? AND ? THEN jel.debit ELSE 0 END) as period_debit,'.
                 ' SUM(CASE WHEN COALESCE(jel.line_date, je.entry_date) BETWEEN ? AND ? THEN jel.credit ELSE 0 END) as period_credit',
                 [$from, $from, $from, $to, $from, $to]
             )
-            ->groupBy('coa.code', 'coa.name', 'coa.class', 'jel.kontragent_id', 'k.name')
+            ->groupBy('coa.code', 'coa.name', 'coa.class', 'jel.kooperant_id', 'k.name')
             ->orderBy('coa.code')
             ->orderBy('k.name')
             ->get();
@@ -405,14 +405,14 @@ class ReportController extends Controller
     {
         $query = DB::table('journal_entry_lines as jel')
             ->join('journal_entries as je', 'je.id', '=', 'jel.journal_entry_id')
-            ->leftJoin('kontragenti as k', 'k.id', '=', 'jel.kontragent_id')
+            ->leftJoin('kooperanti as k', 'k.id', '=', 'jel.kooperant_id')
             ->where('je.company_id', $companyId)
             ->where('je.status', JournalEntryStatus::Posted->value)
             ->whereRaw('COALESCE(jel.line_date, je.entry_date) BETWEEN ? AND ?', [$from, $to]);
         $scope($query);
 
         return $query->selectRaw(
-            'jel.id, jel.account_code, jel.kontragent_id, k.name as kontragent_name,'.
+            'jel.id, jel.account_code, jel.kooperant_id, k.name as kooperant_name,'.
             ' jel.sort_order, jel.debit, jel.credit, jel.description, jel.closing_reference,'.
             ' je.id as journal_entry_id, je.group_code, je.sequence_number,'.
             ' COALESCE(jel.line_date, je.entry_date) as effective_date'
@@ -434,8 +434,8 @@ class ReportController extends Controller
                 'date' => $line->effective_date,
                 'voucher' => $this->voucherNumberFor($line->group_code, $line->sequence_number),
                 'account_code' => $line->account_code,
-                'kontragent_id' => $line->kontragent_id,
-                'kontragent_name' => $line->kontragent_name,
+                'kooperant_id' => $line->kooperant_id,
+                'kooperant_name' => $line->kooperant_name,
                 'description' => $line->description,
                 'closing_reference' => $line->closing_reference,
                 'debit' => (float) $line->debit,

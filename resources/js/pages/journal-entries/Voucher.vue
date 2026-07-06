@@ -36,9 +36,9 @@ interface EditableLine {
     account_code: string;
     account_name: string;
     account_obj: AccountResult | null;
-    kontragent_id: number | null;
-    kontragent_name: string;
-    kontragent_obj: PartnerResult | null;
+    kooperant_id: number | null;
+    kooperant_name: string;
+    kooperant_obj: PartnerResult | null;
     line_date: string;
     description: string;
     closing_reference: string;
@@ -143,9 +143,9 @@ function emptyLine(idx = 0): EditableLine {
         account_code:       '',
         account_name:       '',
         account_obj:        null,
-        kontragent_id:      null,
-        kontragent_name:    '',
-        kontragent_obj:     null,
+        kooperant_id:      null,
+        kooperant_name:    '',
+        kooperant_obj:     null,
         line_date:          form.entry_date,
         description:        '',
         closing_reference:  '',
@@ -167,16 +167,16 @@ function entryToLines(e: JournalEntry | null): EditableLine[] {
             class:        l.account.class ?? 0,
             account_type: l.account.account_type ?? '',
         } : null,
-        kontragent_id:     l.kontragent_id ?? null,
-        kontragent_name:   l.kontragent?.name ?? '',
-        kontragent_obj:    l.kontragent ? {
-            id:      l.kontragent.id,
-            name:    l.kontragent.name,
-            edb:     l.kontragent.edb,
-            embs:    l.kontragent.embs ?? null,
-            address: l.kontragent.address ?? null,
-            phone:   l.kontragent.phone ?? null,
-            email:   l.kontragent.email ?? null,
+        kooperant_id:     l.kooperant_id ?? null,
+        kooperant_name:   l.kooperant?.name ?? '',
+        kooperant_obj:    l.kooperant ? {
+            id:      l.kooperant.id,
+            name:    l.kooperant.name,
+            edb:     l.kooperant.edb,
+            embs:    l.kooperant.embs ?? null,
+            address: l.kooperant.address ?? null,
+            phone:   l.kooperant.phone ?? null,
+            email:   l.kooperant.email ?? null,
         } : null,
         line_date:         l.line_date ?? e.entry_date ?? '',
         description:       l.description ?? '',
@@ -267,7 +267,7 @@ async function save() {
             reference:   form.reference || null,
             lines: validLines.map((l, i) => ({
                 account_code:      l.account_code,
-                kontragent_id:     l.kontragent_id,
+                kooperant_id:     l.kooperant_id,
                 line_date:         l.line_date || null,
                 description:       l.description || null,
                 closing_reference: l.closing_reference || null,
@@ -481,9 +481,9 @@ async function onAccountBlur(e: FocusEvent, row: number) {
 function onPartnerInput(e: Event, row: number) {
     const input = e.target as HTMLInputElement;
     const query = input.value;
-    lines.value[row].kontragent_name = query;
-    lines.value[row].kontragent_id   = null;
-    lines.value[row].kontragent_obj  = null;
+    lines.value[row].kooperant_name = query;
+    lines.value[row].kooperant_id   = null;
+    lines.value[row].kooperant_obj  = null;
     isDirty.value = true;
 
     ac.rect  = input.getBoundingClientRect();
@@ -516,9 +516,9 @@ function selectAcResult(idx: number) {
         nextTick(() => focusCell(ac.row, 'partner'));
     } else {
         const r = result as PartnerResult;
-        line.kontragent_id   = r.id;
-        line.kontragent_name = r.name;
-        line.kontragent_obj  = r;
+        line.kooperant_id   = r.id;
+        line.kooperant_name = r.name;
+        line.kooperant_obj  = r;
         nextTick(() => focusCell(ac.row, 'line_date'));
     }
 
@@ -529,12 +529,12 @@ function selectAcResult(idx: number) {
 // ─── Open invoices ────────────────────────────────────────────────────────────
 
 watch(
-    () => selectedLine.value?.kontragent_id,
-    async (kontragentId) => {
+    () => selectedLine.value?.kooperant_id,
+    async (kooperantId) => {
         openInvoices.purchases = [];
         openInvoices.sales     = [];
-        if (!kontragentId) return;
-        const res = await fetch(`/api/voucher/open-invoices?kontragent_id=${kontragentId}&company_id=${props.companyId}`);
+        if (!kooperantId) return;
+        const res = await fetch(`/api/voucher/open-invoices?kooperant_id=${kooperantId}&company_id=${props.companyId}`);
         if (!res.ok) return;
         const data = await res.json();
         openInvoices.purchases = data.purchases ?? [];
@@ -743,11 +743,11 @@ function fmtDate(d: string | null | undefined): string {
                                     <span class="block truncate text-muted-foreground">{{ line.account_name }}</span>
                                 </td>
 
-                                <!-- Партнер (kontragent, autocomplete) -->
+                                <!-- Партнер (kooperant, autocomplete) -->
                                 <td class="px-0.5 py-0">
                                     <input
                                         :data-row="i" data-col="partner"
-                                        :value="line.kontragent_name"
+                                        :value="line.kooperant_name"
                                         @input="onPartnerInput($event, i)"
                                         @keydown="e => handleKeydown(e, i, 'partner')"
                                         @focus="selectedRow = i"
@@ -894,13 +894,13 @@ function fmtDate(d: string | null | undefined): string {
                 <!-- Partner info -->
                 <div class="flex-shrink-0 border-b p-2.5">
                     <p class="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Партнер</p>
-                    <template v-if="selectedLine?.kontragent_obj">
-                        <p class="text-sm font-medium">{{ selectedLine.kontragent_name }}</p>
+                    <template v-if="selectedLine?.kooperant_obj">
+                        <p class="text-sm font-medium">{{ selectedLine.kooperant_name }}</p>
                         <div class="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
-                            <p v-if="selectedLine.kontragent_obj.edb">ЕДБ: {{ selectedLine.kontragent_obj.edb }}</p>
-                            <p v-if="selectedLine.kontragent_obj.embs">ЕМБС: {{ selectedLine.kontragent_obj.embs }}</p>
-                            <p v-if="selectedLine.kontragent_obj.address" class="truncate">{{ selectedLine.kontragent_obj.address }}</p>
-                            <p v-if="selectedLine.kontragent_obj.phone">{{ selectedLine.kontragent_obj.phone }}</p>
+                            <p v-if="selectedLine.kooperant_obj.edb">ЕДБ: {{ selectedLine.kooperant_obj.edb }}</p>
+                            <p v-if="selectedLine.kooperant_obj.embs">ЕМБС: {{ selectedLine.kooperant_obj.embs }}</p>
+                            <p v-if="selectedLine.kooperant_obj.address" class="truncate">{{ selectedLine.kooperant_obj.address }}</p>
+                            <p v-if="selectedLine.kooperant_obj.phone">{{ selectedLine.kooperant_obj.phone }}</p>
                         </div>
                     </template>
                     <p v-else class="text-xs italic text-muted-foreground">—</p>
@@ -915,7 +915,7 @@ function fmtDate(d: string | null | undefined): string {
                         </span>
                     </p>
                     <div class="flex-1 overflow-y-auto p-2 text-[11px]">
-                        <template v-if="!selectedLine?.kontragent_id">
+                        <template v-if="!selectedLine?.kooperant_id">
                             <p class="pt-3 text-center italic text-muted-foreground">Изберете партнер</p>
                         </template>
                         <template v-else-if="openInvoices.purchases.length === 0 && openInvoices.sales.length === 0">

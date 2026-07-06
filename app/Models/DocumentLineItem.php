@@ -16,7 +16,7 @@ class DocumentLineItem extends Model
         // Common
         'suggested_account_code', 'confirmed_account_code', 'ai_confidence',
         // Reconciliation suggestions (bank statements)
-        'suggested_kontragent_id', 'suggested_closing_reference',
+        'suggested_kooperant_id', 'suggested_closing_reference',
     ];
 
     protected function casts(): array
@@ -49,8 +49,8 @@ class DocumentLineItem extends Model
         return $this->belongsTo(ChartOfAccount::class, 'confirmed_account_code', 'code');
     }
 
-    public function suggestedKontragent(): BelongsTo
+    public function suggestedKooperant(): BelongsTo
     {
-        return $this->belongsTo(Kontragent::class, 'suggested_kontragent_id');
+        return $this->belongsTo(Kooperant::class, 'suggested_kooperant_id');
     }
 }
