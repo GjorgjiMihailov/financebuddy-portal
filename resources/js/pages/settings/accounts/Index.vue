@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Plus, Search, Pencil, X } from '@lucide/vue';
+import { Plus, Search, Pencil, X, Trash2, ListPlus } from '@lucide/vue';
 import { ref, computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -120,6 +120,36 @@ function submitCreate() {
     });
 }
 
+// ─── Bulk-add dialog (аналитички конта) ───────────────────────────────────────
+const showBulk = ref(false);
+
+const emptyBulkRow = () => ({ parent_code: '', code: '', name: '' });
+
+const bulkForm = useForm({
+    rows: [emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow()],
+});
+
+function addBulkRow() {
+    bulkForm.rows.push(emptyBulkRow());
+}
+
+function removeBulkRow(i: number) {
+    if (bulkForm.rows.length > 1) bulkForm.rows.splice(i, 1);
+}
+
+function submitBulk() {
+    // Испрати ги само редовите со внесени матично конто, шифра и назив
+    bulkForm.transform((data) => ({
+        rows: data.rows.filter((r) => r.parent_code.trim() !== '' && r.code.trim() !== '' && r.name.trim() !== ''),
+    })).post('/settings/accounts-bulk', {
+        onSuccess: () => {
+            showBulk.value = false;
+            bulkForm.reset();
+            bulkForm.rows = [emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow(), emptyBulkRow()];
+        },
+    });
+}
+
 // ─── Edit dialog ─────────────────────────────────────────────────────────────
 const showEdit = ref(false);
 const editTarget = ref<Account | null>(null);
@@ -164,10 +194,16 @@ const hasFilters = computed(() => search.value || classFilter.value !== '');
                     {{ accounts.total }} конта — Правилник бр. 174 на УЈП (2024/2025)
                 </p>
             </div>
-            <Button @click="showCreate = true">
-                <Plus class="mr-2 size-4" />
-                Додај конто
-            </Button>
+            <div class="flex gap-2">
+                <Button variant="outline" @click="showBulk = true">
+                    <ListPlus class="mr-2 size-4" />
+                    Масовен внес на аналитики
+                </Button>
+                <Button @click="showCreate = true">
+                    <Plus class="mr-2 size-4" />
+                    Додај конто
+                </Button>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -356,6 +392,81 @@ const hasFilters = computed(() => search.value || classFilter.value !== '');
                 <Button variant="outline" @click="showCreate = false">Откажи</Button>
                 <Button :disabled="createForm.processing" @click="submitCreate">
                     {{ createForm.processing ? 'Зачувување…' : 'Додај конто' }}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <!-- ─── Bulk-add Dialog (аналитички конта) ────────────────────────────────── -->
+    <Dialog v-model:open="showBulk">
+        <DialogContent class="max-w-3xl">
+            <DialogHeader>
+                <DialogTitle>Масовен внес на аналитички конта</DialogTitle>
+            </DialogHeader>
+
+            <p class="text-sm text-muted-foreground">
+                Секоја аналитика припаѓа на матично (синтетичко) конто — класата и типот се преземаат од матичното конто.
+                Празните редови се игнорираат.
+            </p>
+
+            <div class="max-h-[55vh] overflow-auto rounded-lg border">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 bg-muted/95">
+                        <tr class="border-b">
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground w-36">Матично конто *</th>
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground w-32">Шифра *</th>
+                            <th class="px-2 py-2 text-left font-medium text-muted-foreground">Назив *</th>
+                            <th class="w-10" />
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(row, i) in bulkForm.rows" :key="i" class="border-b last:border-0 align-top">
+                            <td class="px-2 py-1">
+                                <Input v-model="row.parent_code" class="h-8 font-mono text-sm" placeholder="npr. 220" maxlength="10" />
+                                <p v-if="(bulkForm.errors as any)[`rows.${i}.parent_code`]" class="mt-0.5 text-xs text-destructive">
+                                    {{ (bulkForm.errors as any)[`rows.${i}.parent_code`] }}
+                                </p>
+                            </td>
+                            <td class="px-2 py-1">
+                                <Input v-model="row.code" class="h-8 font-mono text-sm" placeholder="npr. 2201" maxlength="10" />
+                                <p v-if="(bulkForm.errors as any)[`rows.${i}.code`]" class="mt-0.5 text-xs text-destructive">
+                                    {{ (bulkForm.errors as any)[`rows.${i}.code`] }}
+                                </p>
+                            </td>
+                            <td class="px-2 py-1">
+                                <Input v-model="row.name" class="h-8 text-sm" placeholder="Назив на аналитиката" />
+                                <p v-if="(bulkForm.errors as any)[`rows.${i}.name`]" class="mt-0.5 text-xs text-destructive">
+                                    {{ (bulkForm.errors as any)[`rows.${i}.name`] }}
+                                </p>
+                            </td>
+                            <td class="px-2 py-1">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    class="size-7 text-muted-foreground hover:text-destructive"
+                                    :disabled="bulkForm.rows.length <= 1"
+                                    @click="removeBulkRow(i)"
+                                >
+                                    <Trash2 class="size-3.5" />
+                                </Button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <Button type="button" variant="ghost" size="sm" class="w-fit" @click="addBulkRow">
+                <Plus class="mr-1 size-3" />
+                Додај ред
+            </Button>
+
+            <p v-if="(bulkForm.errors as any).rows" class="text-xs text-destructive">{{ (bulkForm.errors as any).rows }}</p>
+
+            <DialogFooter>
+                <Button variant="outline" @click="showBulk = false">Откажи</Button>
+                <Button :disabled="bulkForm.processing" @click="submitBulk">
+                    {{ bulkForm.processing ? 'Зачувување…' : 'Зачувај ги сите' }}
                 </Button>
             </DialogFooter>
         </DialogContent>

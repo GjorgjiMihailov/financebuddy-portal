@@ -21,6 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ── Chart of Accounts ─────────────────────────────────────────────────────
     Route::get('settings/accounts', [\App\Http\Controllers\ChartOfAccountController::class, 'index'])->name('settings.accounts.index');
     Route::post('settings/accounts', [\App\Http\Controllers\ChartOfAccountController::class, 'store'])->name('settings.accounts.store');
+    Route::post('settings/accounts-bulk', [\App\Http\Controllers\ChartOfAccountController::class, 'storeBulk'])->name('settings.accounts.store-bulk');
     Route::put('settings/accounts/{account}', [\App\Http\Controllers\ChartOfAccountController::class, 'update'])->name('settings.accounts.update');
 
     // ── Journal Groups ────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ use App\Models\ChartOfAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -67,6 +68,40 @@ class ChartOfAccountController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Контото е успешно додадено.']);
 
         return to_route('settings.accounts.index');
+    }
+
+    public function storeBulk(Request $request): RedirectResponse
+    {
+        $this->authorize('create', ChartOfAccount::class);
+
+        $validated = $request->validate([
+            'rows'               => ['required', 'array', 'min:1'],
+            'rows.*.parent_code' => ['required', 'string', 'exists:chart_of_accounts,code'],
+            'rows.*.code'        => ['required', 'string', 'max:10', 'distinct', 'unique:chart_of_accounts,code'],
+            'rows.*.name'        => ['required', 'string', 'max:255'],
+        ]);
+
+        $count = DB::transaction(function () use ($validated) {
+            foreach ($validated['rows'] as $row) {
+                $parent = ChartOfAccount::findOrFail($row['parent_code']);
+
+                ChartOfAccount::create([
+                    'code'           => $row['code'],
+                    'name'           => $row['name'],
+                    'class'          => $parent->class,
+                    'account_type'   => $parent->account_type,
+                    'parent_code'    => $parent->code,
+                    'allows_posting' => true,
+                    'is_active'      => true,
+                ]);
+            }
+
+            return count($validated['rows']);
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Додадени {$count} аналитички конта."]);
+
+        return back();
     }
 
     public function update(Request $request, ChartOfAccount $account): RedirectResponse
