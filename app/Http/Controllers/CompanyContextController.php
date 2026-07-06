@@ -11,7 +11,7 @@ use Inertia\Response;
 
 class CompanyContextController extends Controller
 {
-    public function select(): Response
+    public function select(Request $request): Response
     {
         $companies = Company::withCount([
             'documents as pending_count' => fn ($q) => $q->whereIn('status', [
@@ -21,7 +21,10 @@ class CompanyContextController extends Controller
             ]),
         ])->orderBy('name')->get();
 
-        return Inertia::render('SelectCompany', ['companies' => $companies]);
+        return Inertia::render('SelectCompany', [
+            'companies' => $companies,
+            'canCreate' => $request->user()->can('create', Company::class),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

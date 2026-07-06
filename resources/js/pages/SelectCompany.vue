@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { Building2 } from '@lucide/vue';
+import { Building2, Plus } from '@lucide/vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 
 interface Company {
@@ -12,10 +12,15 @@ interface Company {
 
 defineProps<{
     companies: Company[];
+    canCreate: boolean;
 }>();
 
 function select(companyId: number) {
     router.post('/select-company', { company_id: companyId });
+}
+
+function addNew() {
+    router.get('/companies/create');
 }
 </script>
 
@@ -34,7 +39,7 @@ function select(companyId: number) {
                 </div>
 
                 <div
-                    v-if="companies.length === 0"
+                    v-if="companies.length === 0 && !canCreate"
                     class="rounded-xl border border-dashed p-10 text-center text-muted-foreground"
                 >
                     Нема регистрирани компании.
@@ -68,6 +73,18 @@ function select(companyId: number) {
                         </div>
 
                         <div class="text-xs font-medium text-primary">Работи →</div>
+                    </button>
+
+                    <button
+                        v-if="canCreate"
+                        type="button"
+                        @click="addNew"
+                        class="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-5 text-center text-muted-foreground shadow-sm transition-all hover:border-foreground/30 hover:text-foreground hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-foreground/5">
+                            <Plus class="size-5" />
+                        </div>
+                        <div class="font-medium leading-tight">Додади нова</div>
                     </button>
                 </div>
             </div>
