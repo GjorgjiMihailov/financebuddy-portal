@@ -35,14 +35,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Exchange rate API (без company.selected — само auth)
     Route::get('api/exchange-rate', [ExchangeRateController::class, 'show'])->name('exchange-rate');
+
+    // ── Companies — управувањето со компании не зависи од тековно избраната фирма ──
+    Route::resource('companies', CompanyController::class);
 });
 
 // ── Сите останати рути — со company.selected + year.selected middleware ──────
 Route::middleware(['auth', 'verified', 'company.selected', 'year.selected'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
-
-    // ── Companies ─────────────────────────────────────────────────────────────
-    Route::resource('companies', CompanyController::class);
 
     // ── Documents ─────────────────────────────────────────────────────────────
     Route::resource('documents', DocumentController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
