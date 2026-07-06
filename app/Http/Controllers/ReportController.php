@@ -74,16 +74,16 @@ class ReportController extends Controller
         $rows = $this->accountBalances($companyId, $from, $to)
             ->filter(fn ($r) => $this->hasActivity($r));
 
-        $parentCodes = $rows->pluck('parent_code')->filter()->unique()->values();
-        $parentNames = ChartOfAccount::whereIn('code', $parentCodes)->pluck('name', 'code');
+        $syntheticCodes = $rows->map(fn ($r) => substr($r->account_code, 0, 3))->unique()->values();
+        $syntheticNames = ChartOfAccount::whereIn('code', $syntheticCodes)->pluck('name', 'code');
 
-        $synthetics = $rows->groupBy(fn ($r) => $r->parent_code ?? $r->account_code)
-            ->map(function ($items, $code) use ($parentNames) {
+        $synthetics = $rows->groupBy(fn ($r) => substr($r->account_code, 0, 3))
+            ->map(function ($items, $code) use ($syntheticNames) {
                 $first = $items->first();
                 $shaped = $items->map(fn ($r) => $this->shapeBucket((array) $r));
 
                 return array_merge(
-                    ['code' => $code, 'name' => $parentNames[$code] ?? $first->account_name, 'class' => (int) $first->class],
+                    ['code' => $code, 'name' => $syntheticNames[$code] ?? $first->account_name, 'class' => (int) $first->class],
                     $this->sumBuckets($shaped)
                 );
             })->values();
